@@ -50,4 +50,42 @@ export class CollaboratorsController {
   async remove(@Param('id') id: string, @Req() req: any) {
     return this.collaboratorsService.remove(id, req.session.cooperativeId);
   }
+
+  // ============================================
+  // ADHESION FORM
+  // ============================================
+
+  @Get(':id/adhesion-form')
+  async getAdhesionForm(@Param('id') id: string, @Req() req: any) {
+    return this.collaboratorsService.getAdhesionForm(
+      id,
+      req.session.cooperativeId,
+    );
+  }
+
+  @Post(':id/adhesion-form')
+  async createAdhesionForm(
+    @Param('id') id: string,
+    @Body() data: any,
+    @Req() req: any,
+  ) {
+    return this.collaboratorsService.upsertAdhesionForm(
+      id,
+      req.session.cooperativeId,
+      data,
+    );
+  }
+
+  @Put(':id/adhesion-form')
+  async updateAdhesionForm(
+    @Param('id') id: string,
+    @Body() data: any,
+    @Req() req: any,
+  ) {
+    return this.collaboratorsService.upsertAdhesionForm(
+      id,
+      req.session.cooperativeId,
+      data,
+    );
+  }
 }
