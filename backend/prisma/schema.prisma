@@ -1,0 +1,468 @@
+// ============================================
+// CoopElos 4.0 - Database Schema
+// ============================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  admin
+  rh
+  dp
+  viewer
+}
+
+enum Gender {
+  masculine
+  feminine
+}
+
+enum MaritalStatus {
+  single
+  married
+  divorced
+  widowed
+  other
+}
+
+enum CollaboratorStatus {
+  active
+  inactive
+  suspended
+}
+
+enum TaskStatus {
+  pending
+  in_progress
+  completed
+  overdue
+}
+
+enum PayrollStatus {
+  draft
+  processing
+  closed
+  cancelled
+}
+
+// ============================================
+// CORE TABLES
+// ============================================
+
+/// Multi-tenant cooperative
+model Cooperative {
+  id            String   @id @default(uuid())
+  name          String
+  cnpj          String?  @unique
+  logo_url      String?
+  address       String?
+  phone         String?
+  email         String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  users          User[]
+  collaborators  Collaborator[]
+  payrolls       Payroll[]
+  patients       Patient[]
+  tasks          Task[]
+  audit_logs     AuditLog[]
+
+  @@map("cooperative")
+}
+
+/// System users (admin, rh, dp, viewer)
+model User {
+  id            String   @id @default(uuid())
+  cooperative_id String
+  cooperative   Cooperative @relation(fields: [cooperative_id], references: [id])
+  
+  name          String
+  email         String
+  password_hash String
+  role          UserRole @default(viewer)
+  is_active     Boolean  @default(true)
+  last_login    DateTime?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  created_tasks   Task[]       @relation("TaskCreator")
+  assigned_tasks  Task[]       @relation("TaskAssignee")
+  audit_logs      AuditLog[]
+
+  @@unique([cooperative_id, email])
+  @@map("user")
+}
+
+/// Employee/worker record
+model Collaborator {
+  id            String   @id @default(uuid())
+  cooperative_id String
+  cooperative   Cooperative @relation(fields: [cooperative_id], references: [id])
+  
+  // Personal data
+  full_name     String
+  cpf           String
+  rg            String?
+  nis_pis       String?
+  birth_date    DateTime?
+  birthplace    String?
+  nationality   String   @default("BRASILEIRA")
+  gender        Gender?
+  marital_status MaritalStatus?
+  education_level String?
+  father_name   String?
+  mother_name   String?
+  
+  // Contact
+  mobile_phone  String?
+  home_phone    String?
+  email         String?
+  
+  // Address
+  address       String?
+  neighborhood  String?
+  address_complement String?
+  postal_code   String?
+  city          String?
+  state         String?  @db.VarChar(2)
+  
+  // Status
+  status        CollaboratorStatus @default(active)
+  admission_date DateTime?
+  
+  // Relationships
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  adhesion_form  AdhesionForm?
+  spouse_name    String?
+  spouse_cpf     String?
+  
+  documents     Document[]
+  payroll_items  PayrollItem[]
+  time_sheets_hospital TimeSheetHospital[]
+  time_sheets_sad      TimeSheetSad[]
+  vacations      Vacation[]
+  contract_history ContractHistory[]
+
+  @@unique([cooperative_id, cpf])
+  @@map("collaborator")
+}
+
+// ============================================
+// ADHESION FORM (Ficha de Adesão)
+// ============================================
+
+model AdhesionForm {
+  id            String   @id @default(uuid())
+  collaborator_id String  @unique
+  collaborator  Collaborator @relation(fields: [collaborator_id], references: [id])
+  
+  // Registration info
+  registration_number Int?
+  registration_location String?
+  registration_date  DateTime?
+  
+  // Referrer data
+  referrer_name      String?
+  referrer_phone     String?
+  referrer_email     String?
+  
+  // Bank details
+  bank_name          String?
+  bank_branch        String?
+  bank_account       String?
+  pix_key            String?
+  
+  // Professional data
+  company_name       String?
+  desired_position   String?
+  hired_position     String?
+  salary             Decimal? @db.Decimal(10, 2)
+  work_card          String?
+  
+  // Social capital
+  social_capital     Decimal? @db.Decimal(10, 2)
+  integrated_value   Decimal? @db.Decimal(10, 2)
+  accumulated_value  Decimal? @db.Decimal(10, 2)
+  current_value      Decimal? @db.Decimal(10, 2)
+  
+  // Activities
+  primary_activity   String?
+  secondary_activity String?
+  other_activities   Json?    @db.JsonB
+  other_professional_activities String?
+  
+  // Documents checklist
+  has_registration_card   Boolean @default(false)
+  has_technical_certificates Boolean @default(false)
+  has_cv                  Boolean @default(false)
+  brief_description       String?
+  
+  // Installments
+  installments      Int?
+  first_due_date    DateTime?
+  
+  // Manager
+  manager_email     String?
+  
+  // Profile image
+  profile_image_url String?
+  
+  // Legal
+  declaration_terms_accepted Boolean @default(false)
+  signature_url     String?
+  
+  // Metadata (from Bubble)
+  external_id       String?  @unique
+  slug              String?
+  created_by        String?
+  
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  @@map("adhesion_form")
+}
+
+// ============================================
+// DOCUMENTS
+// ============================================
+
+model Document {
+  id            String   @id @default(uuid())
+  collaborator_id String
+  collaborator  Collaborator @relation(fields: [collaborator_id], references: [id])
+  
+  name          String
+  file_key      String     // S3 key
+  file_url      String?    // Signed URL (temporary)
+  mime_type     String?
+  file_size     Int?
+  
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@map("document")
+}
+
+// ============================================
+// PAYROLL (Folha de Pagamento)
+// ============================================
+
+model Payroll {
+  id            String   @id @default(uuid())
+  cooperative_id String
+  cooperative   Cooperative @relation(fields: [cooperative_id], references: [id])
+  
+  year          Int
+  month         Int
+  status        PayrollStatus @default(draft)
+  
+  total_gross   Decimal @default(0) @db.Decimal(12, 2)
+  total_discounts Decimal @default(0) @db.Decimal(12, 2)
+  total_net     Decimal @default(0) @db.Decimal(12, 2)
+  
+  closed_at     DateTime?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  items         PayrollItem[]
+
+  @@unique([cooperative_id, year, month])
+  @@map("payroll")
+}
+
+model PayrollItem {
+  id            String   @id @default(uuid())
+  payroll_id    String
+  payroll       Payroll @relation(fields: [payroll_id], references: [id])
+  
+  collaborator_id String
+  collaborator  Collaborator @relation(fields: [collaborator_id], references: [id])
+  
+  gross_salary  Decimal @db.Decimal(10, 2)
+  hours_worked  Decimal? @db.Decimal(5, 2)
+  overtime_hours Decimal? @db.Decimal(5, 2)
+  night_hours   Decimal? @db.Decimal(5, 2)
+  discounts     Decimal @default(0) @db.Decimal(10, 2)
+  net_salary    Decimal @db.Decimal(10, 2)
+  
+  notes         String?
+  created_at    DateTime @default(now())
+
+  @@map("payroll_item")
+}
+
+// ============================================
+// TIMESHEETS (Ponto)
+// ============================================
+
+/// Hospital timesheet (matrix format)
+model TimeSheetHospital {
+  id            String   @id @default(uuid())
+  collaborator_id String
+  collaborator  Collaborator @relation(fields: [collaborator_id], references: [id])
+  
+  year          Int
+  month         Int
+  schedule_data Json     @db.JsonB  // Matrix: { "day_1": "M", "day_2": "T", ... }
+  total_hours   Decimal @default(0) @db.Decimal(5, 2)
+  
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@unique([collaborator_id, year, month])
+  @@map("time_sheet_hospital")
+}
+
+/// SAD timesheet (per patient)
+model TimeSheetSad {
+  id            String   @id @default(uuid())
+  collaborator_id String
+  collaborator  Collaborator @relation(fields: [collaborator_id], references: [id])
+  patient_id    String
+  patient       Patient @relation(fields: [patient_id], references: [id])
+  
+  year          Int
+  month         Int
+  
+  morning_shifts Int     @default(0)
+  night_shifts   Int     @default(0)
+  six_by_one     Int     @default(0)
+  
+  gross_value   Decimal @default(0) @db.Decimal(10, 2)
+  meal_allowance Decimal @default(0) @db.Decimal(10, 2)
+  quota_value   Decimal @default(0) @db.Decimal(10, 2)
+  tax_value     Decimal @default(0) @db.Decimal(10, 2)
+  net_value     Decimal @default(0) @db.Decimal(10, 2)
+  
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@unique([collaborator_id, patient_id, year, month])
+  @@map("time_sheet_sad")
+}
+
+model Patient {
+  id            String   @id @default(uuid())
+  cooperative_id String
+  cooperative   Cooperative @relation(fields: [cooperative_id], references: [id])
+  
+  name          String
+  code          String?  // P001, P002, etc.
+  
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  time_sheets   TimeSheetSad[]
+
+  @@map("patient")
+}
+
+// ============================================
+// VACATIONS (Férias)
+// ============================================
+
+model Vacation {
+  id            String   @id @default(uuid())
+  collaborator_id String
+  collaborator  Collaborator @relation(fields: [collaborator_id], references: [id])
+  
+  start_date    DateTime
+  end_date      DateTime
+  days          Int
+  status        String   @default("scheduled") // scheduled, taken, cancelled
+  
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@map("vacation")
+}
+
+// ============================================
+// CONTRACT HISTORY
+// ============================================
+
+model ContractHistory {
+  id            String   @id @default(uuid())
+  collaborator_id String
+  collaborator  Collaborator @relation(fields: [collaborator_id], references: [id])
+  
+  position      String?
+  salary        Decimal @db.Decimal(10, 2)
+  change_date   DateTime
+  reason        String?
+  
+  created_at    DateTime @default(now())
+
+  @@map("contract_history")
+}
+
+// ============================================
+// TASKS (Tarefas)
+// ============================================
+
+model Task {
+  id            String   @id @default(uuid())
+  cooperative_id String
+  cooperative   Cooperative @relation(fields: [cooperative_id], references: [id])
+  
+  title         String
+  description   String?
+  status        TaskStatus @default(pending)
+  priority      Int      @default(0)
+  
+  due_date      DateTime?
+  completed_at  DateTime?
+  
+  creator_id    String
+  creator       User     @relation("TaskCreator", fields: [creator_id], references: [id])
+  
+  assignee_id   String?
+  assignee      User?    @relation("TaskAssignee", fields: [assignee_id], references: [id])
+  
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@index([cooperative_id, status, due_date])
+  @@map("task")
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  cooperative_id String
+  cooperative   Cooperative @relation(fields: [cooperative_id], references: [id])
+  
+  user_id       String?
+  user          User?    @relation(fields: [user_id], references: [id])
+  
+  action        String   // CREATE, UPDATE, DELETE
+  table_name    String
+  record_id     String
+  
+  old_data      Json?    @db.JsonB
+  new_data      Json?    @db.JsonB
+  
+  ip_address    String?
+  user_agent    String?
+  
+  created_at    DateTime @default(now())
+
+  @@index([cooperative_id, created_at])
+  @@map("audit_log")
+}
