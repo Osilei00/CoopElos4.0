@@ -138,6 +138,8 @@ model Collaborator {
   
   // Status
   status        CollaboratorStatus @default(active)
+  ativo         Boolean  @default(true)
+  collaborator_number Int?
   admission_date DateTime?
   
   // Relationships

@@ -7,6 +7,14 @@ export class QueueService implements OnModuleDestroy {
   private workers: Map<string, Worker> = new Map();
 
   private get connection() {
+    const url = process.env.REDIS_URL;
+    if (url) {
+      const parsed = new URL(url);
+      return {
+        host: parsed.hostname,
+        port: parseInt(parsed.port || '6379'),
+      };
+    }
     return {
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379'),

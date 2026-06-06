@@ -10,11 +10,15 @@ import {
 } from '@nestjs/common';
 import { TimeSheetsService } from './timesheets.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { PdfService } from '../pdf/pdf.service';
 
 @Controller('timesheets')
 @UseGuards(AuthGuard)
 export class TimeSheetsController {
-  constructor(private timeSheetsService: TimeSheetsService) {}
+  constructor(
+    private timeSheetsService: TimeSheetsService,
+    private pdfService: PdfService,
+  ) {}
 
   // ============================================
   // HOSPITAL
@@ -68,5 +72,57 @@ export class TimeSheetsController {
   @Post('sad')
   async upsertSad(@Body() data: any) {
     return this.timeSheetsService.upsertSad(data);
+  }
+
+  // ============================================
+  // PDF EXPORTS
+  // ============================================
+
+  @Get('hospital/:id/export')
+  async exportHospitalPdf(
+    @Param('id') id: string,
+    @Req() req: any,
+  ) {
+    try {
+      const pdfBuffer = await this.pdfService.generateTimesheetPdf(
+        id,
+        'hospital',
+        req.session.cooperativeId,
+      );
+      return {
+        success: true,
+        data: pdfBuffer.toString('base64'),
+        filename: `ponto_hospitalar_${id}.pdf`,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Get('sad/:id/export')
+  async exportSadPdf(
+    @Param('id') id: string,
+    @Req() req: any,
+  ) {
+    try {
+      const pdfBuffer = await this.pdfService.generateTimesheetPdf(
+        id,
+        'sad',
+        req.session.cooperativeId,
+      );
+      return {
+        success: true,
+        data: pdfBuffer.toString('base64'),
+        filename: `ponto_sad_${id}.pdf`,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   }
 }

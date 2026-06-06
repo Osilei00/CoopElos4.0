@@ -9,11 +9,15 @@ import {
 } from '@nestjs/common';
 import { PayrollService } from './payroll.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { QueueService } from '../queue/queue.service';
 
 @Controller('payrolls')
 @UseGuards(AuthGuard)
 export class PayrollController {
-  constructor(private payrollService: PayrollService) {}
+  constructor(
+    private payrollService: PayrollService,
+    private queueService: QueueService,
+  ) {}
 
   @Get()
   async findAll(
@@ -49,5 +53,17 @@ export class PayrollController {
   @Post(':id/close')
   async close(@Param('id') id: string, @Req() req: any) {
     return this.payrollService.close(id, req.session.cooperativeId);
+  }
+
+  @Post(':id/export')
+  async exportPdf(@Param('id') id: string, @Req() req: any) {
+    const job = await this.queueService.addJob('pdf-generation', 'generate-pdf', {
+      type: 'payroll',
+      id,
+      cooperativeId: req.session.cooperativeId,
+      userId: req.session.userId,
+    });
+
+    return { jobId: job.id, status: 'processing' };
   }
 }

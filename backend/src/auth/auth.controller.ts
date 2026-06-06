@@ -1,11 +1,16 @@
 import { Controller, Post, Body, Get, Req, UseGuards } from '@nestjs/common';
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { AuthService } from './auth.service';
 import { AuthGuard } from './auth.guard';
 
 class LoginDto {
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
+
+  @IsString()
+  @IsNotEmpty()
   password: string;
-  cooperativeId: string;
 }
 
 @Controller('auth')
@@ -17,7 +22,6 @@ export class AuthController {
     return this.authService.login(
       loginDto.email,
       loginDto.password,
-      loginDto.cooperativeId,
     );
   }
 

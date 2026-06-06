@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
 
 interface SessionData {
   userId: string;
@@ -33,12 +34,10 @@ export class AuthService {
     };
   }
 
-  async login(email: string, password: string, cooperativeId: string) {
-    // TODO: Implement proper password hashing with bcrypt/argon2
+  async login(email: string, password: string) {
     const user = await this.prisma.user.findFirst({
       where: {
         email,
-        cooperative_id: cooperativeId,
         is_active: true,
       },
     });
@@ -47,8 +46,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // TODO: Verify password hash
-    // For now, return user data
+    // Verify password hash
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     return {
       userId: user.id,
       cooperativeId: user.cooperative_id,
