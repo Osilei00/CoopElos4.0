@@ -76,6 +76,7 @@ model Cooperative {
   patients       Patient[]
   tasks          Task[]
   audit_logs     AuditLog[]
+  ficha_cooperados FichaCooperadoForm[]
 
   @@map("cooperative")
 }
@@ -466,4 +467,104 @@ model AuditLog {
 
   @@index([cooperative_id, created_at])
   @@map("audit_log")
+}
+
+// ============================================
+// FICHA COOPERADO FORM (importação Bubble)
+// ============================================
+
+model FichaCooperadoForm {
+  id                    String   @id @default(uuid())
+  cooperative_id        String
+  cooperative           Cooperative @relation(fields: [cooperative_id], references: [id])
+
+  // Dados de identificação
+  venc_cooperados       String?  // 1º Venc_Cooperados
+  matricula             String?
+  unique_id_bubble      String?  @unique  // unique id (Bubble)
+  slug                  String?
+
+  // Dados pessoais
+  nome_cooperado        String?
+  cpf_cooperado         String?
+  rg                    String?
+  nis_pis               String?
+  ctps_serie            String?
+  nacionalidade         String?
+  naturalidade          String?
+  nascimento            DateTime?
+  sexo                  String?
+  estado_civil          String?
+  escolaridade          String?
+  nome_pai              String?
+  nome_mae              String?
+  nome_conjuge          String?
+  cpf_conjuge           String?
+
+  // Contato
+  celular_cooperado     String?
+  telefone_residencial  String?
+  email_cooperado       String?
+  celular_indicador     String?
+  email_indicador       String?
+  nome_indicacao        String?
+  email_gestor          String?
+
+  // Endereço
+  endereco              String?
+  bairro                String?
+  complemento           String?
+  cep                   String?
+  cidade                String?
+  estado                String?
+
+  // Dados profissionais
+  empresa_trabalho      String?
+  cargo_pretendido      String?
+  cargo_contratado      String?
+  salario               String?
+  data_admissao         DateTime?
+  data_cadastro         DateTime?
+
+  // Atividades
+  ativ_coop_dropa       String?
+  ativ_coop_dropb       String?
+  atividades_cooperados String?
+  outras_ativd_profissionais String?
+
+  // Dados bancários
+  banco                 String?
+  agencia               String?
+  conta_corrente        String?
+  pix                   String?
+  capital_social        String?
+
+  // Documentos e checklist
+  carteira_registro     String?
+  atestados_tecnicos    String?
+  curriculo_profissional String?
+  descricao_sucinta     String?
+
+  // Valores
+  valor_acumulado       String?
+  valor_atual           String?
+  valor_integralizado   String?
+  valor_var             String?
+
+  // Outros
+  parcelas              String?
+  em_aberto             String?
+  local_cadastro        String?
+  imagem_cooperado      String?
+
+  // Metadados Bubble
+  creation_date         DateTime?
+  modified_date         DateTime?
+  creator               String?
+
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  @@index([cooperative_id, cpf_cooperado])
+  @@map("ficha_cooperado_form")
 }
