@@ -126,20 +126,22 @@ export default function CollaboratorsPage() {
                       </Td>
                       <Td>
                         <HStack spacing={2}>
-                          <Link href={`/collaborators/${collaborator.id}`}>
+                          <Link href={`/collaborators/${collaborator.id}/view`}>
                             <IconButton
-                              aria-label="Ver detalhes"
+                              aria-label="Visualizar"
                               icon={<HiEye />}
                               size="sm"
                               variant="ghost"
+                              colorScheme="blue"
                             />
                           </Link>
-                          <Link href={`/collaborators/${collaborator.id}/edit`}>
+                          <Link href={`/collaborators/${collaborator.id}`}>
                             <IconButton
                               aria-label="Editar"
                               icon={<HiPencil />}
                               size="sm"
                               variant="ghost"
+                              colorScheme="yellow"
                             />
                           </Link>
                         </HStack>
