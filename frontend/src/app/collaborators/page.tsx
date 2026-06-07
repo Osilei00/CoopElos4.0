@@ -24,21 +24,10 @@ import {
   Spinner,
   Alert,
   AlertIcon,
-  useToast,
-  useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalCloseButton,
 } from '@chakra-ui/react';
-import { HiMagnifyingGlass, HiPlus, HiPencil, HiEye, HiChevronUp, HiChevronDown, HiKey } from 'react-icons/hi2';
+import { HiMagnifyingGlass, HiPlus, HiPencil, HiEye, HiChevronUp, HiChevronDown } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
 import { useCollaborators, useSession } from '@/hooks';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
 import Link from 'next/link';
 
 export default function CollaboratorsPage() {
@@ -47,27 +36,8 @@ export default function CollaboratorsPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { data: collaborators, isLoading } = useCollaborators(search || undefined);
   const { data: session, isLoading: sessionLoading } = useSession();
-  const toast = useToast();
-  const queryClient = useQueryClient();
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const [resetResult, setResetResult] = useState<{ username: string; temporaryPassword: string } | null>(null);
 
   const isAdmin = session?.role === 'admin';
-
-  const resetPasswordMutation = useMutation({
-    mutationFn: async (collaboratorId: string) => {
-      const { data } = await api.post(`/collaborators/${collaboratorId}/reset-password`);
-      return data;
-    },
-    onSuccess: (data) => {
-      setResetResult(data);
-      onOpen();
-      toast({ title: 'Senha resetada com sucesso', status: 'success', duration: 3000 });
-    },
-    onError: () => {
-      toast({ title: 'Erro ao resetar senha', status: 'error', duration: 3000 });
-    },
-  });
 
   const filteredCollaborators = useMemo(() => {
     const list = collaborators || [];
@@ -237,15 +207,6 @@ export default function CollaboratorsPage() {
                                 colorScheme="yellow"
                               />
                             </Link>
-                            <IconButton
-                              aria-label="Resetar Senha"
-                              icon={<HiKey />}
-                              size="sm"
-                              variant="ghost"
-                              colorScheme="orange"
-                              onClick={() => resetPasswordMutation.mutate(collaborator.id)}
-                              isLoading={resetPasswordMutation.isPending}
-                            />
                           </HStack>
                         </Td>
                     </Tr>
@@ -255,37 +216,6 @@ export default function CollaboratorsPage() {
             </Table>
           </CardBody>
         </Card>
-
-        {/* Reset Password Modal */}
-        <Modal isOpen={isOpen} onClose={onClose} size="md">
-          <ModalOverlay />
-          <ModalContent>
-            <ModalHeader>Senha Resetada</ModalHeader>
-            <ModalCloseButton />
-            <ModalBody>
-              {resetResult && (
-                <Box>
-                  <Text mb={4}>A nova senha temporária foi gerada com sucesso:</Text>
-                  <Card bg="gray.50" mb={4}>
-                    <CardBody>
-                      <Text fontWeight="bold" mb={2}>Usuário: {resetResult.username}</Text>
-                      <Text fontWeight="bold" color="blue.500">Senha: {resetResult.temporaryPassword}</Text>
-                    </CardBody>
-                  </Card>
-                  <Alert status="warning" borderRadius="md">
-                    <AlertIcon />
-                    <Text fontSize="sm">Anote esta senha e compartilhe de forma segura com o colaborador. Esta senha deverá ser alterada no primeiro acesso.</Text>
-                  </Alert>
-                </Box>
-              )}
-            </ModalBody>
-            <ModalFooter>
-              <Button colorScheme="blue" onClick={onClose}>
-                Fechar
-              </Button>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
       </Box>
     </MainLayout>
   );

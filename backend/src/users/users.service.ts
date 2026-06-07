@@ -13,6 +13,7 @@ export class UsersService {
         ...(search && {
           OR: [
             { name: { contains: search, mode: 'insensitive' } },
+            { username: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } },
           ],
         }),
@@ -20,6 +21,7 @@ export class UsersService {
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         role: true,
         is_active: true,
@@ -39,6 +41,7 @@ export class UsersService {
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         role: true,
         is_active: true,
@@ -55,16 +58,30 @@ export class UsersService {
     return user;
   }
 
-  async create(cooperativeId: string, data: { name: string; email: string; password: string; role: string }) {
-    const existingUser = await this.prisma.user.findFirst({
+  async create(cooperativeId: string, data: { name: string; username?: string; email: string; password: string; role: string }) {
+    // Check email uniqueness
+    const existingEmail = await this.prisma.user.findFirst({
       where: {
         cooperative_id: cooperativeId,
         email: data.email,
       },
     });
 
-    if (existingUser) {
+    if (existingEmail) {
       throw new ConflictException('Email already exists');
+    }
+
+    // Check username uniqueness if provided
+    if (data.username) {
+      const existingUsername = await this.prisma.user.findFirst({
+        where: {
+          username: data.username,
+        },
+      });
+
+      if (existingUsername) {
+        throw new ConflictException('Username already exists');
+      }
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
@@ -73,6 +90,7 @@ export class UsersService {
       data: {
         cooperative_id: cooperativeId,
         name: data.name,
+        username: data.username || null,
         email: data.email,
         password_hash: passwordHash,
         role: data.role as any,
@@ -80,6 +98,7 @@ export class UsersService {
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         role: true,
         is_active: true,
@@ -88,7 +107,7 @@ export class UsersService {
     });
   }
 
-  async update(id: string, cooperativeId: string, data: { name?: string; email?: string; role?: string; is_active?: boolean }) {
+  async update(id: string, cooperativeId: string, data: { name?: string; username?: string; email?: string; role?: string; is_active?: boolean }) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
@@ -114,6 +133,19 @@ export class UsersService {
       }
     }
 
+    if (data.username && data.username !== user.username) {
+      const existingUsername = await this.prisma.user.findFirst({
+        where: {
+          username: data.username,
+          id: { not: id },
+        },
+      });
+
+      if (existingUsername) {
+        throw new ConflictException('Username already exists');
+      }
+    }
+
     return this.prisma.user.update({
       where: { id },
       data: {
@@ -123,6 +155,7 @@ export class UsersService {
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         role: true,
         is_active: true,
@@ -131,7 +164,7 @@ export class UsersService {
     });
   }
 
-  async resetPassword(id: string, cooperativeId: string, newPassword: string) {
+  async resetPassword(id: string, cooperativeId: string) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
@@ -143,17 +176,23 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    // Generate temporary password: first name + 4 random numbers
+    const firstName = user.name?.split(' ')[0]?.toLowerCase() || 'user';
+    const randomNumbers = Math.floor(1000 + Math.random() * 9000);
+    const temporaryPassword = `${firstName}${randomNumbers}`;
+    
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
-    return this.prisma.user.update({
+    await this.prisma.user.update({
       where: { id },
       data: { password_hash: passwordHash },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
     });
+
+    return {
+      message: 'Password reset successfully',
+      username: user.username || user.email,
+      temporaryPassword,
+    };
   }
 
   async remove(id: string, cooperativeId: string) {

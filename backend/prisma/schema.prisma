@@ -85,6 +85,7 @@ model User {
   cooperative   Cooperative @relation(fields: [cooperative_id], references: [id])
   
   name          String
+  username      String?  @unique
   email         String
   password_hash String
   role          UserRole @default(viewer)
@@ -110,10 +111,6 @@ model Collaborator {
   cpf           String   @unique
   cel           String?
   email         String?
-
-  // Authentication fields
-  username      String?  @unique
-  password_hash String?
 
   @@map("collaborator")
 }

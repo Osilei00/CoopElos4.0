@@ -45,10 +45,9 @@ export class UsersController {
   @Post(':id/reset-password')
   async resetPassword(
     @Param('id') id: string,
-    @Body('password') password: string,
     @Req() req: any,
   ) {
-    return this.usersService.resetPassword(id, req.session.cooperativeId, password);
+    return this.usersService.resetPassword(id, req.session.cooperativeId);
   }
 
   @Delete(':id')

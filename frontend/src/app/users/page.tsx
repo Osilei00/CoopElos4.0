@@ -38,7 +38,7 @@ import {
   AlertIcon,
   Spinner,
 } from '@chakra-ui/react';
-import { HiPlus, HiMagnifyingGlass, HiPencil, HiTrash } from 'react-icons/hi2';
+import { HiPlus, HiMagnifyingGlass, HiPencil, HiTrash, HiKey } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -48,6 +48,7 @@ import { useSession } from '@/hooks';
 interface User {
   id: string;
   name: string;
+  username: string | null;
   email: string;
   role: string;
   is_active: boolean;
@@ -73,10 +74,13 @@ export default function UsersPage() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isResetOpen, onOpen: onResetOpen, onClose: onResetClose } = useDisclosure();
   const [search, setSearch] = useState('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [resetResult, setResetResult] = useState<{ username: string; temporaryPassword: string } | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     role: 'viewer',
@@ -136,15 +140,30 @@ export default function UsersPage() {
     },
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data } = await api.post(`/users/${userId}/reset-password`);
+      return data;
+    },
+    onSuccess: (data) => {
+      setResetResult(data);
+      onResetOpen();
+      toast({ title: 'Senha resetada com sucesso', status: 'success', duration: 3000 });
+    },
+    onError: () => {
+      toast({ title: 'Erro ao resetar senha', status: 'error', duration: 3000 });
+    },
+  });
+
   const resetForm = () => {
-    setFormData({ name: '', email: '', password: '', role: 'viewer' });
+    setFormData({ name: '', username: '', email: '', password: '', role: 'viewer' });
     setEditingUser(null);
   };
 
   const handleOpenModal = (user?: User) => {
     if (user) {
       setEditingUser(user);
-      setFormData({ name: user.name, email: user.email, password: '', role: user.role });
+      setFormData({ name: user.name, username: user.username || '', email: user.email, password: '', role: user.role });
     } else {
       resetForm();
     }
@@ -237,6 +256,7 @@ export default function UsersPage() {
                 <Thead>
                   <Tr>
                     <Th>Nome</Th>
+                    <Th>Usuário</Th>
                     <Th>Email</Th>
                     <Th>Perfil</Th>
                     <Th>Status</Th>
@@ -248,6 +268,7 @@ export default function UsersPage() {
                   {users?.map((user) => (
                     <Tr key={user.id}>
                       <Td fontWeight="medium">{user.name}</Td>
+                      <Td>{user.username || '-'}</Td>
                       <Td>{user.email}</Td>
                       <Td>
                         <Badge colorScheme={roleColors[user.role]}>
@@ -274,6 +295,15 @@ export default function UsersPage() {
                             onClick={() => handleOpenModal(user)}
                           />
                           <IconButton
+                            aria-label="Resetar Senha"
+                            icon={<HiKey />}
+                            size="sm"
+                            variant="ghost"
+                            colorScheme="orange"
+                            onClick={() => resetPasswordMutation.mutate(user.id)}
+                            isLoading={resetPasswordMutation.isPending}
+                          />
+                          <IconButton
                             aria-label="Excluir"
                             icon={<HiTrash />}
                             size="sm"
@@ -291,7 +321,7 @@ export default function UsersPage() {
           </CardBody>
         </Card>
 
-        {/* Modal */}
+        {/* Create/Edit Modal */}
         <Modal isOpen={isOpen} onClose={onClose} size="md">
           <ModalOverlay />
           <ModalContent>
@@ -304,6 +334,14 @@ export default function UsersPage() {
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Usuário</FormLabel>
+                  <Input
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder="Nome de usuário (opcional)"
                   />
                 </FormControl>
                 <FormControl isRequired>
@@ -348,6 +386,37 @@ export default function UsersPage() {
                 isLoading={createMutation.isPending || updateMutation.isPending}
               >
                 {editingUser ? 'Salvar' : 'Criar'}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Reset Password Modal */}
+        <Modal isOpen={isResetOpen} onClose={onResetClose} size="md">
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Senha Resetada</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              {resetResult && (
+                <Box>
+                  <Text mb={4}>A nova senha temporária foi gerada com sucesso:</Text>
+                  <Card bg="gray.50" mb={4}>
+                    <CardBody>
+                      <Text fontWeight="bold" mb={2}>Usuário: {resetResult.username}</Text>
+                      <Text fontWeight="bold" color="blue.500">Senha: {resetResult.temporaryPassword}</Text>
+                    </CardBody>
+                  </Card>
+                  <Alert status="warning" borderRadius="md">
+                    <AlertIcon />
+                    <Text fontSize="sm">Anote esta senha e compartilhe de forma segura com o usuário. Esta senha deverá ser alterada no primeiro acesso.</Text>
+                  </Alert>
+                </Box>
+              )}
+            </ModalBody>
+            <ModalFooter>
+              <Button colorScheme="blue" onClick={onResetClose}>
+                Fechar
               </Button>
             </ModalFooter>
           </ModalContent>
