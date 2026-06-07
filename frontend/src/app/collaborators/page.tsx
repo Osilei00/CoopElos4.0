@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box,
   Heading,
@@ -21,23 +21,73 @@ import {
   Badge,
   IconButton,
   HStack,
-  Select,
   Spinner,
+  Alert,
+  AlertIcon,
 } from '@chakra-ui/react';
-import { HiMagnifyingGlass, HiPlus, HiPencil, HiEye } from 'react-icons/hi2';
+import { HiMagnifyingGlass, HiPlus, HiPencil, HiEye, HiChevronUp, HiChevronDown } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
-import { useCollaborators } from '@/hooks';
+import { useCollaborators, useSession } from '@/hooks';
 import Link from 'next/link';
 
 export default function CollaboratorsPage() {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortField, setSortField] = useState<'cooperado_number' | 'nome_cooperado'>('cooperado_number');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { data: collaborators, isLoading } = useCollaborators(search || undefined);
+  const { data: session, isLoading: sessionLoading } = useSession();
 
-  const filteredCollaborators = collaborators?.filter((collaborator: any) => {
-    if (statusFilter === 'all') return true;
-    return collaborator.status === statusFilter;
-  });
+  const isAdmin = session?.role === 'admin';
+
+  const filteredCollaborators = useMemo(() => {
+    const list = collaborators || [];
+
+    return [...list].sort((a: any, b: any) => {
+      const valA = a[sortField];
+      const valB = b[sortField];
+      const comparison = typeof valA === 'number'
+        ? valA - valB
+        : String(valA || '').localeCompare(String(valB || ''), 'pt-BR');
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [collaborators, sortField, sortDirection]);
+
+  const handleSort = (field: 'cooperado_number' | 'nome_cooperado') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: 'cooperado_number' | 'nome_cooperado' }) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ? <HiChevronUp /> : <HiChevronDown />;
+  };
+
+  if (sessionLoading) {
+    return (
+      <MainLayout>
+        <Box textAlign="center" py={10}>
+          <Spinner />
+        </Box>
+      </MainLayout>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <MainLayout>
+        <Box>
+          <Alert status="warning" borderRadius="md">
+            <AlertIcon />
+            Acesso restrito. Apenas administradores podem acessar esta página.
+          </Alert>
+        </Box>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -71,24 +121,36 @@ export default function CollaboratorsPage() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </InputGroup>
-              <Select
-                maxW="200px"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">Todos os Status</option>
-                <option value="active">Ativos</option>
-                <option value="inactive">Inativos</option>
-              </Select>
             </Flex>
 
             <Table variant="simple">
               <Thead>
                 <Tr>
-                  <Th>#</Th>
-                  <Th>Nome</Th>
+                  <Th
+                    cursor="pointer"
+                    userSelect="none"
+                    onClick={() => handleSort('cooperado_number')}
+                    _hover={{ color: 'brand.500' }}
+                  >
+                    <HStack spacing={1}>
+                      <span>#</span>
+                      <SortIcon field="cooperado_number" />
+                    </HStack>
+                  </Th>
+                  <Th
+                    cursor="pointer"
+                    userSelect="none"
+                    onClick={() => handleSort('nome_cooperado')}
+                    _hover={{ color: 'brand.500' }}
+                  >
+                    <HStack spacing={1}>
+                      <span>Nome</span>
+                      <SortIcon field="nome_cooperado" />
+                    </HStack>
+                  </Th>
                   <Th>CPF</Th>
-                  <Th>Cargo</Th>
+                  <Th>Cidade</Th>
+                  <Th>Celular</Th>
                   <Th>Status</Th>
                   <Th>Ações</Th>
                 </Tr>
@@ -96,13 +158,13 @@ export default function CollaboratorsPage() {
               <Tbody>
                 {isLoading ? (
                   <Tr>
-                    <Td colSpan={6} textAlign="center" py={8}>
+                    <Td colSpan={7} textAlign="center" py={8}>
                       <Spinner />
                     </Td>
                   </Tr>
                 ) : filteredCollaborators?.length === 0 ? (
                   <Tr>
-                    <Td colSpan={6} textAlign="center" py={8}>
+                    <Td colSpan={7} textAlign="center" py={8}>
                       Nenhum colaborador encontrado
                     </Td>
                   </Tr>
@@ -110,42 +172,43 @@ export default function CollaboratorsPage() {
                   filteredCollaborators?.map((collaborator: any) => (
                   <Tr key={collaborator.id}>
                         <Td fontWeight="500" color="brand.500">
-                          {String(collaborator.collaborator_number).padStart(2, '0')}
+                          {String(collaborator.cooperado_number).padStart(2, '0')}
                         </Td>
-                        <Td fontWeight="500">{collaborator.full_name}</Td>
-                        <Td>{collaborator.cpf}</Td>
-                      <Td>{collaborator.adhesion_form?.desired_position || '-'}</Td>
-                      <Td>
-                        <Badge
-                          colorScheme={
-                            collaborator.status === 'active' ? 'green' : 'red'
-                          }
-                        >
-                          {collaborator.status === 'active' ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                      </Td>
-                      <Td>
-                        <HStack spacing={2}>
-                          <Link href={`/collaborators/${collaborator.id}/view`}>
-                            <IconButton
-                              aria-label="Visualizar"
-                              icon={<HiEye />}
-                              size="sm"
-                              variant="ghost"
-                              colorScheme="blue"
-                            />
-                          </Link>
-                          <Link href={`/collaborators/${collaborator.id}`}>
-                            <IconButton
-                              aria-label="Editar"
-                              icon={<HiPencil />}
-                              size="sm"
-                              variant="ghost"
-                              colorScheme="yellow"
-                            />
-                          </Link>
-                        </HStack>
-                      </Td>
+                        <Td fontWeight="500">{collaborator.nome_cooperado}</Td>
+                        <Td>{collaborator.cpf_cooperado}</Td>
+                        <Td>{collaborator.cidade || '-'}</Td>
+                        <Td>{collaborator.celular_cooperado || '-'}</Td>
+                        <Td>
+                          <Badge
+                            colorScheme={
+                              collaborator.status === 'active' ? 'green' : 'red'
+                            }
+                          >
+                            {collaborator.status === 'active' ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </Td>
+                        <Td>
+                          <HStack spacing={2}>
+                            <Link href={`/collaborators/${collaborator.id}/view`}>
+                              <IconButton
+                                aria-label="Visualizar"
+                                icon={<HiEye />}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="blue"
+                              />
+                            </Link>
+                            <Link href={`/collaborators/${collaborator.id}`}>
+                              <IconButton
+                                aria-label="Editar"
+                                icon={<HiPencil />}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="yellow"
+                              />
+                            </Link>
+                          </HStack>
+                        </Td>
                     </Tr>
                   ))
                 )}

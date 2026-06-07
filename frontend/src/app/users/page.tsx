@@ -34,12 +34,16 @@ import {
   FormLabel,
   Select,
   useDisclosure,
+  Alert,
+  AlertIcon,
+  Spinner,
 } from '@chakra-ui/react';
 import { HiPlus, HiMagnifyingGlass, HiPencil, HiTrash } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useSession } from '@/hooks';
 
 interface User {
   id: string;
@@ -78,12 +82,16 @@ export default function UsersPage() {
     role: 'viewer',
   });
 
+  const { data: session, isLoading: sessionLoading } = useSession();
+  const isAdmin = session?.role === 'admin';
+
   const { data: users, isLoading } = useQuery({
     queryKey: ['users', search],
     queryFn: async () => {
       const { data } = await api.get('/users', { params: { search } });
       return data as User[];
     },
+    enabled: isAdmin,
   });
 
   const createMutation = useMutation({
@@ -151,6 +159,29 @@ export default function UsersPage() {
       createMutation.mutate(formData);
     }
   };
+
+  if (sessionLoading) {
+    return (
+      <MainLayout>
+        <Box textAlign="center" py={10}>
+          <Spinner />
+        </Box>
+      </MainLayout>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <MainLayout>
+        <Box>
+          <Alert status="warning" borderRadius="md">
+            <AlertIcon />
+            Acesso restrito. Apenas administradores podem acessar esta página.
+          </Alert>
+        </Box>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

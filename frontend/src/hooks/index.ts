@@ -4,6 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 
 // ============================================
+// SESSION
+// ============================================
+
+export { useSession } from './useSession';
+
+// ============================================
 // COLLABORATORS
 // ============================================
 
@@ -12,6 +18,22 @@ export function useCollaborators(search?: string) {
     queryKey: ['collaborators', search],
     queryFn: async () => {
       const { data } = await api.get('/collaborators', {
+        params: { search },
+      });
+      return data;
+    },
+  });
+}
+
+// ============================================
+// COOPERADOS
+// ============================================
+
+export function useCooperados(search?: string) {
+  return useQuery({
+    queryKey: ['cooperados', search],
+    queryFn: async () => {
+      const { data } = await api.get('/cooperados', {
         params: { search },
       });
       return data;
