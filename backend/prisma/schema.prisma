@@ -105,11 +105,15 @@ model User {
 model Collaborator {
   id            String   @id @default(uuid())
   
-  // Core fields only
+  // Core fields
   full_name     String
   cpf           String   @unique
   cel           String?
   email         String?
+
+  // Authentication fields
+  username      String?  @unique
+  password_hash String?
 
   @@map("collaborator")
 }

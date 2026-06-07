@@ -88,4 +88,19 @@ export class CollaboratorsController {
       data,
     );
   }
+
+  // ============================================
+  // PASSWORD RESET
+  // ============================================
+
+  @Post(':id/reset-password')
+  async resetPassword(
+    @Param('id') id: string,
+    @Req() req: any,
+  ) {
+    return this.collaboratorsService.resetPassword(
+      id,
+      req.session.cooperativeId,
+    );
+  }
 }
