@@ -13,6 +13,7 @@ import { QueueModule } from './queue/queue.module';
 import { UsersModule } from './users/users.module';
 import { PatientsModule } from './patients/patients.module';
 import { PdfModule } from './pdf/pdf.module';
+import { CooperadosModule } from './cooperados/cooperados.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { PdfModule } from './pdf/pdf.module';
     PrismaModule,
     AuthModule,
     CollaboratorsModule,
+    CooperadosModule,
     DocumentsModule,
     PayrollModule,
     TimeSheetsModule,

@@ -63,12 +63,14 @@
 ## PRD — Requisitos Funcionais
 ## PRD — Requisitos Não-Funcionais
 ## Database — Entidades e Relações
+- `ficha_cooperado_form`: Tabela com dados completos dos cooperados (importada de CSV do Bubble). Inclui campos de controle `cooperado_number` (Int, auto-numerado) e `status` (String, default "active"). Relaciona-se com `cooperative` via `cooperative_id`.
 ## Backend — Endpoints e Integrações
 ## Backend — Agent Graph
 ## Frontend — Páginas e Componentes
 ### Páginas
 - **Dashboard**: Boas-vindas, cards (colaboradores ativos, pendências DP, documentos a vencer), menu lateral fixo
 - **Lista de Colaboradores**: Busca (nome, CPF, setor), filtros (status, setor, vínculo), tabela com foto/nome/cargo/setor/status/ações
+- **Lista de Cooperados**: Busca (nome, CPF, email), ordenação por # ou Nome, tabela com #/nome/CPF/cargo/status/ações. Dados da tabela `ficha_cooperado_form`.
 - **Perfil do Colaborador**: Foto, status, abas (Dados, Documentos, Folha, Férias, Histórico), botões (Editar, Gerar documento, Enviar para assinatura)
 - **Tarefas & Alertas**: Filtros (Hoje, Esta semana, Atrasadas, Todas), lista com checkbox/título/prazo/botão ver
 - **Folha/DP**: Seletor de mês, botões (Gerar folha, Exportar, Ver pendências), cards (colaboradores na folha, pendências, eSocial), tabela (nome/cargo/salário/horas/descontos/líquido)
@@ -96,7 +98,7 @@
   - Assinatura
 
 ### Layout
-- Sidebar fixa com navegação
+- Sidebar fixa com navegação (Dashboard, Colaboradores, Cooperados, Folha de Pagamento, Ponto Hospitalar, Ponto SAD, Pacientes, Férias, Tarefas, Auditoria, Usuários, Configurações)
 - Header com logo + foto do usuário
 - Conteúdo principal com cards e tabelas
 - Rodapé minimalista

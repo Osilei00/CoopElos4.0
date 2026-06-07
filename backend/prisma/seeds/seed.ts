@@ -71,17 +71,42 @@ interface CSVRow {
   'em aberto': string;
 }
 
+function parseCSVLine(line: string): string[] {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  values.push(current.trim());
+  return values;
+}
+
 function parseCSV(filePath: string): CSVRow[] {
   const content = fs.readFileSync(filePath, 'utf-8');
   const lines = content.split('\n');
-  const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+  const headers = parseCSVLine(lines[0]).map(h => h.replace(/"/g, '').trim());
   
   const rows: CSVRow[] = [];
   
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
     
-    const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+    const values = parseCSVLine(lines[i]).map(v => v.replace(/"/g, '').trim());
     const row: any = {};
     
     headers.forEach((header, index) => {
@@ -326,8 +351,113 @@ async function main() {
     }
   }
   
-  console.log(`\n🎉 Seed completed! Created ${collaboratorCount} collaborators`);
-  
+  // ============================================
+  // FICHA COOPERADO FORM
+  // ============================================
+  console.log('\n📋 Importing ficha_cooperado_form...');
+  let fichaCount = 0;
+  let fichaNumber = 1;
+
+  for (const row of rows) {
+    const nomeCooperado = row['Nome do Cooperado']?.trim();
+    const cpfCooperado = row['CPF Cooperado']?.trim();
+
+    if (!nomeCooperado && !cpfCooperado) {
+      continue;
+    }
+
+    try {
+      const uniqueId = row['unique id']?.trim() || null;
+      if (uniqueId) {
+        const existingFicha = await prisma.fichaCooperadoForm.findFirst({
+          where: { unique_id_bubble: uniqueId },
+        });
+        if (existingFicha) {
+          continue;
+        }
+      }
+
+      await prisma.fichaCooperadoForm.create({
+        data: {
+          cooperative_id: cooperative.id,
+          cooperado_number: fichaNumber,
+          status: 'active',
+          venc_cooperados: row['1º Venc_Cooperados']?.trim() || null,
+          matricula: row['Matricula']?.trim() || null,
+          unique_id_bubble: uniqueId,
+          slug: row['Slug']?.trim() || null,
+          nome_cooperado: nomeCooperado || null,
+          cpf_cooperado: cpfCooperado || null,
+          rg: row['RG']?.trim() || null,
+          nis_pis: row['NIS/PIS']?.trim() || null,
+          ctps_serie: row['CTPS / Série']?.trim() || null,
+          nacionalidade: row['Nacionalidade']?.trim() || null,
+          naturalidade: row['Naturalidade']?.trim() || null,
+          nascimento: convertDate(row['Nascimento']?.trim() || ''),
+          sexo: row['Sexo']?.trim() || null,
+          estado_civil: row['Estado Civil']?.trim() || null,
+          escolaridade: row['Escolaridade']?.trim() || null,
+          nome_pai: row['Nome do Pai']?.trim() || null,
+          nome_mae: row['Nome da Mãe']?.trim() || null,
+          nome_conjuge: row['Nome do Cônjuge']?.trim() || null,
+          cpf_conjuge: row['CPF Cônjuge']?.trim() || null,
+          celular_cooperado: row['Celular Cooperado']?.trim() || null,
+          telefone_residencial: row['Telefone Residencial']?.trim() || null,
+          email_cooperado: row['E-mail coop']?.trim() || null,
+          celular_indicador: row['Celular Indicador']?.trim() || null,
+          email_indicador: row['E-mail Indicador']?.trim() || null,
+          nome_indicacao: row['Nome Indicação']?.trim() || null,
+          email_gestor: row['E-mail Gestor']?.trim() || null,
+          endereco: row['Endereço']?.trim() || null,
+          bairro: row['Bairro']?.trim() || null,
+          complemento: row['Complemento']?.trim() || null,
+          cep: row['CEP']?.trim() || null,
+          cidade: row['Cidade']?.trim() || null,
+          estado: row['Estado']?.trim() || null,
+          empresa_trabalho: row['Empresa/Trabalho']?.trim() || null,
+          cargo_pretendido: row['Cargo Pretendido']?.trim() || null,
+          cargo_contratado: row['Cargo Contratado']?.trim() || null,
+          salario: row['Salário']?.trim() || null,
+          data_admissao: convertDate(row['Data de admissão']?.trim() || ''),
+          data_cadastro: convertDate(row['Data de Cadastro']?.trim() || ''),
+          ativ_coop_dropa: row['Ativ Coop DropA']?.trim() || null,
+          ativ_coop_dropb: row['Ativ Coop DropB']?.trim() || null,
+          atividades_cooperados: row['Atividades Cooperados']?.trim() || null,
+          outras_ativd_profissionais: row['Outras Ativd Profissionais']?.trim() || null,
+          banco: row['Banco']?.trim() || null,
+          agencia: row['Agencia']?.trim() || null,
+          conta_corrente: row['Conta Corrente/Poupança']?.trim() || null,
+          pix: row['PIX']?.trim() || null,
+          capital_social: row['Capital Social']?.trim() || null,
+          carteira_registro: row['Carteira de Registro']?.trim() || null,
+          atestados_tecnicos: row['Atestados técnicos']?.trim() || null,
+          curriculo_profissional: row['Currículo Profissional']?.trim() || null,
+          descricao_sucinta: row['Descrição Sucinta']?.trim() || null,
+          valor_acumulado: row['Valor Acumulado']?.trim() || null,
+          valor_atual: row['Valor Atual']?.trim() || null,
+          valor_integralizado: row['Valor Integralizado']?.trim() || null,
+          valor_var: row['Valor VAR']?.trim() || null,
+          parcelas: row['Parcelas']?.trim() || null,
+          em_aberto: row['em aberto']?.trim() || null,
+          local_cadastro: row['Local de Cadastro']?.trim() || null,
+          imagem_cooperado: row['Imagem Cooperado']?.trim() || null,
+          creation_date: convertDate(row['Creation Date']?.trim() || ''),
+          modified_date: convertDate(row['Modified Date']?.trim() || ''),
+          creator: row['Creator']?.trim() || null,
+        },
+      });
+
+      fichaCount++;
+      fichaNumber++;
+    } catch (error) {
+      console.error(`❌ Error creating ficha for ${nomeCooperado}:`, error);
+    }
+  }
+
+  console.log(`✅ Created ${fichaCount} ficha_cooperado_form records`);
+
+  console.log(`\n🎉 Seed completed! Created ${collaboratorCount} collaborators and ${fichaCount} fichas`);
+
   await prisma.$disconnect();
 }
 

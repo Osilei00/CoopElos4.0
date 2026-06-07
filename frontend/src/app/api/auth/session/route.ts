@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
       userId: session.userId,
       cooperativeId: session.cooperativeId,
       role: session.role,
+      name: session.name,
+      email: session.email,
       isLoggedIn: session.isLoggedIn,
     });
   } catch (error) {

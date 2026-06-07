@@ -11,9 +11,13 @@ import {
 } from '@nestjs/common';
 import { VacationsService } from './vacations.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../generated/prisma/enums';
 
 @Controller('vacations')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.admin, UserRole.rh)
 export class VacationsController {
   constructor(private vacationsService: VacationsService) {}
 

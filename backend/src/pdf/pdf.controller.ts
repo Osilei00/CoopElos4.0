@@ -1,10 +1,14 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { PdfService } from './pdf.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../generated/prisma/enums';
 import { Req } from '@nestjs/common';
 
 @Controller('pdf')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.admin, UserRole.rh, UserRole.dp)
 export class PdfController {
   constructor(private readonly pdfService: PdfService) {}
 

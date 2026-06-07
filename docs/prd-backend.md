@@ -20,6 +20,7 @@ SaaS para gestão de RH e DP de cooperativas hospitalares. Centraliza cadastro d
 - `collaborator`: Dados pessoais, bancários, vínculo.
 - `contract_history`: Histórico de salários/cargos.
 - `adhesion_form`: Ficha de adesão completa.
+- `ficha_cooperado_form`: Ficha completa do cooperado (dados pessoais, profissionais, bancários, documentos). Inclui `cooperado_number` (Int, auto-numerado) e `status` (String, default "active").
 - `document`: Metadados de arquivos no S3.
 - `payroll`: Cabeçalho da folha (mês/ano, status, totais).
 - `payroll_item`: Itens individuais da folha.
@@ -61,6 +62,9 @@ SaaS para gestão de RH e DP de cooperativas hospitalares. Centraliza cadastro d
 - `DELETE /api/collaborators/:id` — Soft delete
 - `GET/POST/PATCH /api/collaborators/:id/adhesion-form` — Ficha de adesão
 - `GET/POST /api/collaborators/:id/history` — Histórico
+
+### Cooperados
+- `GET /api/cooperados` — Listar cooperados da tabela ficha_cooperado_form (com filtro search)
 
 ### Documents
 - `POST /api/documents/upload` — Upload (multipart → S3)

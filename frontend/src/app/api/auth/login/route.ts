@@ -35,6 +35,8 @@ export async function POST(request: NextRequest) {
       userId: data.userId,
       cooperativeId: data.cooperativeId,
       role: data.role,
+      name: data.name,
+      email: data.email,
       isLoggedIn: true,
     };
 
@@ -45,6 +47,8 @@ export async function POST(request: NextRequest) {
         userId: data.userId,
         cooperativeId: data.cooperativeId,
         role: data.role,
+        name: data.name,
+        email: data.email,
       },
     });
 

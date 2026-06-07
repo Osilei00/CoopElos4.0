@@ -24,10 +24,9 @@ export class AuthGuard implements CanActivate {
     try {
       const session = await this.authService.validateUser(userId);
 
-      // Attach session to request
       request.session = {
         userId: session.userId,
-        cooperativeId: session.cooperativeId,
+        cooperativeId,
         role: session.role,
       };
 

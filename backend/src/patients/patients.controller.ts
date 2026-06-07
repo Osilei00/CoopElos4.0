@@ -12,9 +12,13 @@ import {
 } from '@nestjs/common';
 import { PatientsService } from './patients.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../generated/prisma/enums';
 
 @Controller('patients')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.admin, UserRole.rh, UserRole.dp)
 export class PatientsController {
   constructor(private patientsService: PatientsService) {}
 

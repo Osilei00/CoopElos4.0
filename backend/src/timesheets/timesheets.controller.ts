@@ -10,10 +10,14 @@ import {
 } from '@nestjs/common';
 import { TimeSheetsService } from './timesheets.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../generated/prisma/enums';
 import { PdfService } from '../pdf/pdf.service';
 
 @Controller('timesheets')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.admin, UserRole.dp, UserRole.rh)
 export class TimeSheetsController {
   constructor(
     private timeSheetsService: TimeSheetsService,

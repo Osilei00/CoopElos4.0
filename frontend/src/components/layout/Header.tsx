@@ -4,6 +4,8 @@ import { Box, Flex, Text, Avatar, Menu, MenuButton, MenuList, MenuItem, IconButt
 import { usePathname, useRouter } from 'next/navigation';
 import { HiSun, HiMoon, HiArrowRightOnRectangle } from 'react-icons/hi2';
 import { useColorMode } from '@/lib/color-mode';
+import { useSession } from '@/hooks';
+import { useQueryClient } from '@tanstack/react-query';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -25,12 +27,20 @@ export function Header() {
   const title = pageTitles[pathname] || 'CoopElos';
   const { colorMode, toggleColorMode } = useColorMode();
   const isDark = colorMode === 'dark';
+  const { data: session } = useSession();
+  const isAdmin = session?.role === 'admin';
+  const queryClient = useQueryClient();
+
+  const userName = session?.name || 'Usuário';
+  const userEmail = session?.email || '';
+  const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
       });
+      queryClient.removeQueries({ queryKey: ['session'] });
       router.push('/login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
@@ -85,21 +95,21 @@ export function Header() {
                     fontWeight="500" 
                     color={isDark ? 'dark.text.primary' : 'text.primary'}
                   >
-                    Administrador
+                    {userName}
                   </Text>
                   <Text 
                     fontSize="xs" 
                     color={isDark ? 'dark.text.subtle' : 'text.subtle'}
                   >
-                    admin@coopelos.com
+                    {userEmail}
                   </Text>
                 </Box>
-                <Avatar size="sm" name="Admin" bg="brand.500" />
+                <Avatar size="sm" name={userName} bg="brand.500" />
               </Flex>
             </MenuButton>
             <MenuList>
               <MenuItem>Meu Perfil</MenuItem>
-              <MenuItem>Configurações</MenuItem>
+              {isAdmin && <MenuItem>Configurações</MenuItem>}
               <MenuItem 
                 color="danger.500" 
                 onClick={handleLogout}

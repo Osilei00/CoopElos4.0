@@ -9,10 +9,14 @@ import {
 } from '@nestjs/common';
 import { PayrollService } from './payroll.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../generated/prisma/enums';
 import { QueueService } from '../queue/queue.service';
 
 @Controller('payrolls')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.admin, UserRole.dp)
 export class PayrollController {
   constructor(
     private payrollService: PayrollService,

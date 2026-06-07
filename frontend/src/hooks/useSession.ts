@@ -6,6 +6,8 @@ interface SessionData {
   userId: string;
   cooperativeId: string;
   role: 'admin' | 'rh' | 'dp' | 'viewer';
+  name: string;
+  email: string;
   isLoggedIn: boolean;
 }
 

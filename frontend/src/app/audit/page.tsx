@@ -31,6 +31,7 @@ import {
 } from '@chakra-ui/react';
 import { HiMagnifyingGlass, HiShieldCheck, HiDocumentText, HiUserGroup } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
+import { useSession } from '@/hooks';
 
 const auditData = [
   { id: 1, user: 'Maria Santos', action: 'create', entity: 'collaborator', entityId: '123', details: 'Criou cadastro de João Silva', timestamp: '2026-06-03 14:30:00', ip: '192.168.1.100' },
@@ -41,6 +42,8 @@ const auditData = [
 ];
 
 export default function AuditPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.role === 'admin';
   return (
     <MainLayout>
       <Box>
@@ -53,11 +56,13 @@ export default function AuditPage() {
               Histórico de ações e alterações no sistema
             </Text>
           </Box>
-          <HStack spacing={3}>
-            <Button leftIcon={<HiDocumentText />} variant="outline">
-              Exportar Log
-            </Button>
-          </HStack>
+           <HStack spacing={3}>
+             {isAdmin && (
+               <Button leftIcon={<HiDocumentText />} variant="outline">
+                 Exportar Log
+               </Button>
+             )}
+           </HStack>
         </Flex>
 
         <Grid templateColumns="repeat(4, 1fr)" gap={6} mb={8}>

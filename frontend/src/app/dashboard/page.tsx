@@ -29,7 +29,7 @@ const stats = [
     trend: 'up',
     icon: HiUsers,
     color: 'brand.500',
-    href: '/collaborators',
+    href: '/cooperados',
   },
   {
     label: 'Folha de Pagamento',

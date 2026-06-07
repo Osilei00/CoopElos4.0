@@ -41,6 +41,20 @@ export function useCooperados(search?: string) {
   });
 }
 
+export function useCreateCooperado() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const { data: result } = await api.post('/cooperados', data);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cooperados'] });
+    },
+  });
+}
+
 export function useCollaborator(id: string) {
   return useQuery({
     queryKey: ['collaborator', id],

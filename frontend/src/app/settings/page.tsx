@@ -28,8 +28,36 @@ import {
 } from '@chakra-ui/react';
 import { HiCog, HiUser, HiBuildingOffice, HiBell, HiShieldCheck, HiGlobeAlt } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
+import { useSession } from '@/hooks';
+import { Alert, AlertIcon, Spinner } from '@chakra-ui/react';
 
 export default function SettingsPage() {
+  const { data: session, isLoading: sessionLoading } = useSession();
+  const isAdmin = session?.role === 'admin';
+
+  if (sessionLoading) {
+    return (
+      <MainLayout>
+        <Box textAlign="center" py={10}>
+          <Spinner />
+        </Box>
+      </MainLayout>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <MainLayout>
+        <Box>
+          <Alert status="warning" borderRadius="md">
+            <AlertIcon />
+            Acesso restrito. Apenas administradores podem acessar as configurações.
+          </Alert>
+        </Box>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <Box>

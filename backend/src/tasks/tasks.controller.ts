@@ -11,9 +11,13 @@ import {
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../generated/prisma/enums';
 
 @Controller('tasks')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.admin, UserRole.rh, UserRole.dp, UserRole.viewer)
 export class TasksController {
   constructor(private tasksService: TasksService) {}
 

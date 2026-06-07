@@ -6,10 +6,10 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(cooperativeId: string, search?: string) {
+  async findAll(search?: string, cooperativeId?: string) {
     return this.prisma.user.findMany({
       where: {
-        cooperative_id: cooperativeId,
+        ...(cooperativeId && { cooperative_id: cooperativeId }),
         ...(search && {
           OR: [
             { name: { contains: search, mode: 'insensitive' } },
@@ -32,11 +32,11 @@ export class UsersService {
     });
   }
 
-  async findOne(id: string, cooperativeId: string) {
+  async findOne(id: string, cooperativeId?: string) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
-        cooperative_id: cooperativeId,
+        ...(cooperativeId && { cooperative_id: cooperativeId }),
       },
       select: {
         id: true,
@@ -58,12 +58,12 @@ export class UsersService {
     return user;
   }
 
-  async create(cooperativeId: string, data: { name: string; username?: string; email: string; password: string; role: string }) {
-    // Check email uniqueness
+  async create(data: { name: string; username?: string; email: string; password: string; role: string; cooperative_id: string }) {
+    // Check email uniqueness within cooperative
     const existingEmail = await this.prisma.user.findFirst({
       where: {
-        cooperative_id: cooperativeId,
         email: data.email,
+        cooperative_id: data.cooperative_id,
       },
     });
 
@@ -74,9 +74,7 @@ export class UsersService {
     // Check username uniqueness if provided
     if (data.username) {
       const existingUsername = await this.prisma.user.findFirst({
-        where: {
-          username: data.username,
-        },
+        where: { username: data.username },
       });
 
       if (existingUsername) {
@@ -88,12 +86,12 @@ export class UsersService {
 
     return this.prisma.user.create({
       data: {
-        cooperative_id: cooperativeId,
         name: data.name,
         username: data.username || null,
         email: data.email,
         password_hash: passwordHash,
         role: data.role as any,
+        cooperative_id: data.cooperative_id,
       },
       select: {
         id: true,
@@ -107,12 +105,9 @@ export class UsersService {
     });
   }
 
-  async update(id: string, cooperativeId: string, data: { name?: string; username?: string; email?: string; role?: string; is_active?: boolean }) {
+  async update(id: string, data: { name?: string; username?: string; email?: string; role?: string; is_active?: boolean }) {
     const user = await this.prisma.user.findFirst({
-      where: {
-        id,
-        cooperative_id: cooperativeId,
-      },
+      where: { id },
     });
 
     if (!user) {
@@ -122,7 +117,6 @@ export class UsersService {
     if (data.email && data.email !== user.email) {
       const existingUser = await this.prisma.user.findFirst({
         where: {
-          cooperative_id: cooperativeId,
           email: data.email,
           id: { not: id },
         },
@@ -164,12 +158,9 @@ export class UsersService {
     });
   }
 
-  async resetPassword(id: string, cooperativeId: string) {
+  async resetPassword(id: string) {
     const user = await this.prisma.user.findFirst({
-      where: {
-        id,
-        cooperative_id: cooperativeId,
-      },
+      where: { id },
     });
 
     if (!user) {
@@ -195,12 +186,9 @@ export class UsersService {
     };
   }
 
-  async remove(id: string, cooperativeId: string) {
+  async remove(id: string) {
     const user = await this.prisma.user.findFirst({
-      where: {
-        id,
-        cooperative_id: cooperativeId,
-      },
+      where: { id },
     });
 
     if (!user) {

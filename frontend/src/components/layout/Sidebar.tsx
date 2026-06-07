@@ -28,7 +28,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: HiHome },
-  { label: 'Colaboradores', href: '/collaborators', icon: HiUsers, adminOnly: true },
+  { label: 'Usuários', href: '/users', icon: HiUserGroup, adminOnly: true },
   { label: 'Cooperados', href: '/cooperados', icon: HiIdentification },
   { label: 'Folha de Pagamento', href: '/payroll', icon: HiCurrencyDollar },
   { label: 'Ponto Hospitalar', href: '/timesheets/hospital', icon: HiClock },
@@ -37,8 +37,7 @@ const navItems: NavItem[] = [
   { label: 'Férias', href: '/vacations', icon: HiCalendar },
   { label: 'Tarefas', href: '/tasks', icon: HiClipboard },
   { label: 'Auditoria', href: '/audit', icon: HiShieldCheck },
-  { label: 'Usuários', href: '/users', icon: HiUserGroup, adminOnly: true },
-  { label: 'Configurações', href: '/settings', icon: HiCog },
+  { label: 'Configurações', href: '/settings', icon: HiCog, adminOnly: true },
 ];
 
 export function Sidebar() {

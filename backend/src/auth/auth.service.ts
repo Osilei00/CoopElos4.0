@@ -6,6 +6,8 @@ interface SessionData {
   userId: string;
   cooperativeId: string;
   role: string;
+  name: string;
+  email: string;
 }
 
 @Injectable()
@@ -17,9 +19,10 @@ export class AuthService {
       where: { id: userId },
       select: {
         id: true,
-        cooperative_id: true,
         role: true,
         is_active: true,
+        name: true,
+        email: true,
       },
     });
 
@@ -29,8 +32,10 @@ export class AuthService {
 
     return {
       userId: user.id,
-      cooperativeId: user.cooperative_id,
+      cooperativeId: '',
       role: user.role,
+      name: user.name,
+      email: user.email,
     };
   }
 
@@ -53,10 +58,17 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    const cooperative = await this.prisma.cooperative.findFirst();
+    if (!cooperative) {
+      throw new UnauthorizedException('No cooperative configured');
+    }
+
     return {
       userId: user.id,
-      cooperativeId: user.cooperative_id,
+      cooperativeId: cooperative.id,
       role: user.role,
+      name: user.name,
+      email: user.email,
     };
   }
 }

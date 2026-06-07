@@ -19,6 +19,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { HiSun, HiMoon } from 'react-icons/hi2';
 import { useColorMode } from '@/lib/color-mode';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { colorMode, toggleColorMode } = useColorMode();
   const isDark = colorMode === 'dark';
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +47,7 @@ export default function LoginPage() {
         throw new Error('Credenciais inválidas');
       }
 
+      await queryClient.invalidateQueries({ queryKey: ['session'] });
       router.push('/dashboard');
     } catch (err) {
       setError('Credenciais inválidas');

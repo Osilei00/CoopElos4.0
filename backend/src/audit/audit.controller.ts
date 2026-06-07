@@ -8,9 +8,13 @@ import {
 } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../generated/prisma/enums';
 
 @Controller('audit')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.admin, UserRole.rh)
 export class AuditController {
   constructor(private auditService: AuditService) {}
 

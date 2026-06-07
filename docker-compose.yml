@@ -60,8 +60,11 @@ services:
       - /app/node_modules
 
   frontend:
-    image: coopelos40-frontend:dev
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     container_name: coopelos-frontend
+    command: npm run dev
     restart: unless-stopped
     ports:
       - '3000:3000'
@@ -74,6 +77,7 @@ services:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
       - ./frontend/next.config.ts:/app/next.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
       - /app/node_modules
       - /app/.next
 

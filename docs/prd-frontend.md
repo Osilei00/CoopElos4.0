@@ -14,8 +14,9 @@ Interface web responsiva para gestão de RH/DP. Estilo limpo inspirado no Deel, 
 ## Mapa de Páginas (App Router)
 - `/login` — Autenticação
 - `/dashboard` — Visão geral
-- `/collaborators` — Lista
+- `/collaborators` — Lista de colaboradores
 - `/collaborators/[id]` — Perfil (Dados, Documentos, Folha, Férias, Histórico)
+- `/cooperados` — Lista de cooperados (ficha_cooperado_form)
 - `/payroll` — Lista de folhas
 - `/payroll/[id]` — Detalhes da folha
 - `/timesheets/hospital` — Matriz hospitalar
@@ -46,7 +47,7 @@ Interface web responsiva para gestão de RH/DP. Estilo limpo inspirado no Deel, 
 ## API Integration Layer
 - `fetch` wrapper com interceptador de sessão.
 - SWR/React Query para cache e revalidação.
-- Hooks: `useCollaborators`, `usePayrolls`, `useTasks`, `useSession`.
+- Hooks: `useCollaborators`, `useCooperados`, `usePayrolls`, `useTasks`, `useSession`.
 
 ## Requisitos Não-Funcionais
 - Responsivo (mobile/tablet/desktop).
