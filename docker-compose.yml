@@ -56,8 +56,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-      - ./docs:/docs
       - /app/node_modules
+      - ./docs:/docs
 
   frontend:
     build:
@@ -71,6 +71,8 @@ services:
     environment:
       - NEXT_PUBLIC_BACKEND_URL=http://backend:3001/api
       - BACKEND_URL=http://backend:3001
+      - SESSION_SECRET=coopelos-session-secret-key-minimum-32-characters-long!!
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
     depends_on:
       - backend
     volumes:
@@ -79,7 +81,6 @@ services:
       - ./frontend/next.config.ts:/app/next.config.ts
       - ./frontend/tsconfig.json:/app/tsconfig.json
       - /app/node_modules
-      - /app/.next
 
 volumes:
   postgres_data:

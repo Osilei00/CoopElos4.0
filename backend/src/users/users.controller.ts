@@ -15,6 +15,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../generated/prisma/enums';
+import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
 
 @Controller('users')
 @UseGuards(AuthGuard, RolesGuard)
@@ -23,27 +24,24 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  async findAll(@Query('search') search?: string, @Req() req?: any) {
-    return this.usersService.findAll(search, req?.session?.cooperativeId);
+  async findAll(@Query('search') search?: string) {
+    return this.usersService.findAll(search);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @Req() req?: any) {
-    return this.usersService.findOne(id, req?.session?.cooperativeId);
+  async findOne(@Param('id') id: string) {
+    return this.usersService.findOne(id);
   }
 
   @Post()
-  async create(@Body() data: any, @Req() req: any) {
-    return this.usersService.create({
-      ...data,
-      cooperative_id: req.session.cooperativeId,
-    });
+  async create(@Body() data: CreateUserDto) {
+    return this.usersService.create(data);
   }
 
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: UpdateUserDto,
   ) {
     return this.usersService.update(id, data);
   }

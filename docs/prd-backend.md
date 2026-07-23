@@ -1,11 +1,11 @@
 # PRD — Backend (CoopElos)
 
 ## Resumo do Produto
-SaaS para gestão de RH e DP de cooperativas hospitalares. Centraliza cadastro de colaboradores, folha de pagamento (hospitalar e SAD), controle de férias, tarefas/alertas e auditoria.
+SaaS para gestão de RH e DP de cooperativas hospitalares. Centraliza cadastro de cooperados, folha de pagamento (hospitalar e SAD), controle de férias, tarefas/alertas e auditoria.
 
 ## Requisitos Funcionais (Backend)
 - **Auth**: Login via email/senha, gestão de usuários pelo admin, sessão httpOnly.
-- **Colaboradores**: CRUD completo, ficha de adesão, histórico contratual, upload de documentos.
+- **Cooperados**: CRUD completo, ficha de adesão, histórico contratual, upload de documentos.
 - **Folha**: Geração mensal, cálculos (horas extras, noturno, descontos), versão imutável ao fechar.
 - **Ponto**: Matriz hospitalar (códigos M/T/SN/D/F/.), SAD por paciente (cálculo de produção/taxas).
 - **Férias**: Registro, saldo, alertas de vencimento.
@@ -17,10 +17,9 @@ SaaS para gestão de RH e DP de cooperativas hospitalares. Centraliza cadastro d
 ### Tabelas Principais
 - `cooperative`: Dados da cooperativa (multi-tenant).
 - `user`: Usuários do sistema (admin, rh, dp, viewer).
-- `collaborator`: Dados pessoais, bancários, vínculo.
-- `contract_history`: Histórico de salários/cargos.
-- `adhesion_form`: Ficha de adesão completa.
-- `ficha_cooperado_form`: Ficha completa do cooperado (dados pessoais, profissionais, bancários, documentos). Inclui `cooperado_number` (Int, auto-numerado) e `status` (String, default "active").
+- `cooperado`: Ficha completa do cooperado (dados pessoais, profissionais, bancários, documentos). Inclui `cooperado_number` (Int, auto-numerado) e `status` (String, default "active").
+- `contract_history`: Histórico de salários/cargos do cooperado (FK para `cooperado`). Registra mudanças contratuais ao longo do tempo.
+- `adhesion_form`: Ficha de adesão complementar (FK para `cooperado`).
 - `document`: Metadados de arquivos no S3.
 - `payroll`: Cabeçalho da folha (mês/ano, status, totais).
 - `payroll_item`: Itens individuais da folha.
@@ -33,14 +32,14 @@ SaaS para gestão de RH e DP de cooperativas hospitalares. Centraliza cadastro d
 
 ### RLS Policies
 - Todas as tabelas com `cooperative_id` possuem: `USING (cooperative_id = current_setting('app.current_cooperative_id')::uuid)`.
-- Roles: `admin` (full), `rh` (colaboradores/docs/férias), `dp` (folha/ponto), `viewer` (read-only).
+- Roles: `admin` (full), `rh` (cooperados/docs/férias), `dp` (folha/ponto), `viewer` (read-only).
 
 ### Triggers
 - `set_updated_at`: Atualiza `updated_at` em cada UPDATE.
 - `audit_trigger`: Captura mudanças em tabelas críticas e insere em `audit_log`.
 
 ### Indexes
-- `collaborator(cooperative_id, cpf)`, `collaborator(cooperative_id, status)`
+- `cooperado(cooperative_id, cpf_cooperado)`, `cooperado(cooperative_id, status)`
 - `payroll(cooperative_id, year, month)`
 - `task(cooperative_id, status, due_date)`
 - `audit_log(cooperative_id, created_at)`
@@ -54,17 +53,24 @@ SaaS para gestão de RH e DP de cooperativas hospitalares. Centraliza cadastro d
 - `POST /api/auth/users` — Criar usuário (admin)
 - `POST /api/auth/users/:id/reset-password` — Reset senha
 
-### Collaborators
-- `GET /api/collaborators` — Listar com filtros/paginação
-- `POST /api/collaborators` — Criar
-- `GET /api/collaborators/:id` — Detalhes
-- `PATCH /api/collaborators/:id` — Atualizar
-- `DELETE /api/collaborators/:id` — Soft delete
-- `GET/POST/PATCH /api/collaborators/:id/adhesion-form` — Ficha de adesão
-- `GET/POST /api/collaborators/:id/history` — Histórico
+### Dashboard
+- `GET /api/dashboard/stats` — Estatísticas do dashboard (cooperados ativos, folha atual, tarefas pendentes, férias programadas)
 
 ### Cooperados
-- `GET /api/cooperados` — Listar cooperados da tabela ficha_cooperado_form (com filtro search)
+- `GET /api/cooperados` — Listar com filtros/paginação
+- `POST /api/cooperados` — Criar
+- `GET /api/cooperados/:id` — Detalhes
+- `PUT /api/cooperados/:id` — Atualizar
+- `DELETE /api/cooperados/:id` — Soft delete
+- `GET/POST/PUT /api/cooperados/:id/adhesion-form` — Ficha de adesão
+- `GET/POST /api/cooperados/:id/history` — Histórico contratual (salários, cargos, admissões)
+- `POST /api/cooperados/:id/declaracao-adesao` — Upload da Declaração de Adesão (PDF → S3)
+- `GET /api/cooperados/:id/declaracao-adesao` — Obter URL da Declaração de Adesão
+- `GET /api/cooperados/:id/declaracao-adesao/pdf` — Gerar PDF dinâmico da Declaração de Adesão (dados do cooperado)
+- `POST /api/cooperados/:id/declaracao-quitacao` — Upload da Declaração de Quitação (PDF → S3)
+- `GET /api/cooperados/:id/declaracao-quitacao` — Obter URL da Declaração de Quitação
+- `POST /api/cooperados/:id/recibo-contribuicao` — Upload do Recibo de Contribuição (PDF → S3)
+- `GET /api/cooperados/:id/recibo-contribuicao` — Obter URL do Recibo de Contribuição
 
 ### Documents
 - `POST /api/documents/upload` — Upload (multipart → S3)
@@ -75,7 +81,9 @@ SaaS para gestão de RH e DP de cooperativas hospitalares. Centraliza cadastro d
 ### Payroll
 - `GET/POST /api/payrolls` — Listar/Gerar folha
 - `GET /api/payrolls/:id` — Detalhes
-- `POST/PATCH /api/payrolls/:id/items` — Itens
+- `POST /api/payrolls/:id/items` — Criar item na folha
+- `PATCH /api/payrolls/:id/items/:itemId` — Atualizar item
+- `DELETE /api/payrolls/:id/items/:itemId` — Remover item
 - `POST /api/payrolls/:id/close` — Fechar versão
 - `POST /api/payrolls/:id/export` — Job de exportação
 
@@ -86,6 +94,16 @@ SaaS para gestão de RH e DP de cooperativas hospitalares. Centraliza cadastro d
 
 ### Patients, Vacations, Tasks, Audit
 - CRUD padrão conforme especificação de módulos.
+
+### Contribuições
+- `POST /api/contribuicoes` — Registrar contribuição
+- `GET /api/contribuicoes` — Listar com filtros (mês, ano, cooperado, status)
+- `GET /api/contribuicoes/stats` — Estatísticas do ano (total, por mês, cooperados únicos)
+- `GET /api/contribuicoes/:id` — Detalhes
+- `PUT /api/contribuicoes/:id` — Atualizar
+- `DELETE /api/contribuicoes/:id` — Remover
+- `GET /api/contribuicoes/:id/recibo` — Gerar recibo PDF
+- `POST /api/contribuicoes/:id/recibo/upload` — Upload do recibo (PDF → S3)
 
 ## Auth Middleware
 - iron-session no Next.js gera cookie `httpOnly`.

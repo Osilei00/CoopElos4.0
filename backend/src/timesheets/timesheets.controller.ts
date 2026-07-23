@@ -42,8 +42,8 @@ export class TimeSheetsController {
   }
 
   @Get('hospital/:id')
-  async findHospitalOne(@Param('id') id: string) {
-    return this.timeSheetsService.findHospitalOne(id);
+  async findHospitalOne(@Param('id') id: string, @Req() req: any) {
+    return this.timeSheetsService.findHospitalOne(id, req.session.cooperativeId);
   }
 
   @Post('hospital')
@@ -69,8 +69,8 @@ export class TimeSheetsController {
   }
 
   @Get('sad/:id')
-  async findSadOne(@Param('id') id: string) {
-    return this.timeSheetsService.findSadOne(id);
+  async findSadOne(@Param('id') id: string, @Req() req: any) {
+    return this.timeSheetsService.findSadOne(id, req.session.cooperativeId);
   }
 
   @Post('sad')

@@ -94,4 +94,21 @@ export class TasksService {
       },
     });
   }
+
+  async remove(id: string, cooperativeId: string) {
+    const task = await this.prisma.task.findFirst({
+      where: {
+        id,
+        cooperative_id: cooperativeId,
+      },
+    });
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    return this.prisma.task.delete({
+      where: { id },
+    });
+  }
 }

@@ -38,7 +38,7 @@ interface Document {
 }
 
 interface FileUploaderProps {
-  collaboratorId: string;
+  cooperadoId: string;
   onUploadComplete?: (document: Document) => void;
 }
 
@@ -55,7 +55,7 @@ const getFileIcon = (mimeType: string | null) => {
   return HiDocument;
 };
 
-export function FileUploader({ collaboratorId, onUploadComplete }: FileUploaderProps) {
+export function FileUploader({ cooperadoId, onUploadComplete }: FileUploaderProps) {
   const toast = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,12 +64,12 @@ export function FileUploader({ collaboratorId, onUploadComplete }: FileUploaderP
 
   // Fetch documents
   const { data: documents, isLoading } = useQuery({
-    queryKey: ['documents', collaboratorId],
+    queryKey: ['documents', cooperadoId],
     queryFn: async () => {
-      const { data } = await api.get(`/documents/collaborator/${collaboratorId}`);
+      const { data } = await api.get(`/documents/cooperado/${cooperadoId}`);
       return data as Document[];
     },
-    enabled: !!collaboratorId,
+    enabled: !!cooperadoId,
   });
 
   // Upload mutation
@@ -96,7 +96,7 @@ export function FileUploader({ collaboratorId, onUploadComplete }: FileUploaderP
 
       try {
         const { data } = await api.post(
-          `/documents/upload/${collaboratorId}`,
+          `/documents/upload/${cooperadoId}`,
           formData,
           {
             headers: { 'Content-Type': 'multipart/form-data' },
@@ -115,7 +115,7 @@ export function FileUploader({ collaboratorId, onUploadComplete }: FileUploaderP
       }
     },
     onSuccess: (document) => {
-      queryClient.invalidateQueries({ queryKey: ['documents', collaboratorId] });
+      queryClient.invalidateQueries({ queryKey: ['documents', cooperadoId] });
       toast({ title: 'Arquivo enviado com sucesso', status: 'success', duration: 3000 });
       onUploadComplete?.(document);
       // Clear progress after a delay
@@ -133,7 +133,7 @@ export function FileUploader({ collaboratorId, onUploadComplete }: FileUploaderP
       await api.delete(`/documents/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', collaboratorId] });
+      queryClient.invalidateQueries({ queryKey: ['documents', cooperadoId] });
       toast({ title: 'Arquivo removido', status: 'info', duration: 3000 });
     },
   });

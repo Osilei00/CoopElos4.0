@@ -24,16 +24,19 @@ export class DocumentsService {
     this.bucketName = process.env.S3_BUCKET_NAME || 'coopelos-documents';
   }
 
-  async findAll(collaboratorId: string) {
+  async findAll(cooperadoId: string) {
     return this.prisma.document.findMany({
-      where: { collaborator_id: collaboratorId },
+      where: { cooperado_id: cooperadoId, deleted_at: null },
       orderBy: { created_at: 'desc' },
     });
   }
 
-  async findOne(id: string) {
-    const document = await this.prisma.document.findUnique({
-      where: { id },
+  async findOne(id: string, cooperativeId: string) {
+    const document = await this.prisma.document.findFirst({
+      where: {
+        id,
+        cooperado: { cooperative_id: cooperativeId },
+      },
     });
 
     if (!document) {
@@ -43,10 +46,9 @@ export class DocumentsService {
     return document;
   }
 
-  async upload(collaboratorId: string, file: Express.Multer.File) {
-    const fileKey = `collaborators/${collaboratorId}/${Date.now()}-${file.originalname}`;
+  async upload(cooperadoId: string, file: Express.Multer.File) {
+    const fileKey = `cooperados/${cooperadoId}/${Date.now()}-${file.originalname}`;
 
-    // Upload to S3
     await this.s3.send(
       new PutObjectCommand({
         Bucket: this.bucketName,
@@ -56,10 +58,9 @@ export class DocumentsService {
       }),
     );
 
-    // Save metadata to database
     return this.prisma.document.create({
       data: {
-        collaborator_id: collaboratorId,
+        cooperado_id: cooperadoId,
         name: file.originalname,
         file_key: fileKey,
         mime_type: file.mimetype,
@@ -68,9 +69,12 @@ export class DocumentsService {
     });
   }
 
-  async getSignedUrl(id: string) {
-    const document = await this.prisma.document.findUnique({
-      where: { id },
+  async getSignedUrl(id: string, cooperativeId: string) {
+    const document = await this.prisma.document.findFirst({
+      where: {
+        id,
+        cooperado: { cooperative_id: cooperativeId },
+      },
     });
 
     if (!document) {
@@ -84,7 +88,6 @@ export class DocumentsService {
 
     const url = await getSignedUrl(this.s3, command, { expiresIn: 3600 });
 
-    // Update the file_url in database
     await this.prisma.document.update({
       where: { id },
       data: { file_url: url },
@@ -93,16 +96,18 @@ export class DocumentsService {
     return { url };
   }
 
-  async remove(id: string) {
-    const document = await this.prisma.document.findUnique({
-      where: { id },
+  async remove(id: string, cooperativeId: string) {
+    const document = await this.prisma.document.findFirst({
+      where: {
+        id,
+        cooperado: { cooperative_id: cooperativeId },
+      },
     });
 
     if (!document) {
       throw new NotFoundException('Document not found');
     }
 
-    // Delete from S3
     await this.s3.send(
       new DeleteObjectCommand({
         Bucket: this.bucketName,
@@ -110,9 +115,9 @@ export class DocumentsService {
       }),
     );
 
-    // Delete from database
-    return this.prisma.document.delete({
+    return this.prisma.document.update({
       where: { id },
+      data: { deleted_at: new Date() },
     });
   }
 }

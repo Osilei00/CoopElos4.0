@@ -63,10 +63,10 @@ export default function SettingsPage() {
       <Box>
         <Flex justifyContent="space-between" alignItems="center" mb={6}>
           <Box>
-            <Heading size="lg" color="text.primary">
+            <Heading size="lg">
               Configurações
             </Heading>
-            <Text color="text.secondary" mt={1}>
+            <Text mt={1}>
               Preferências do sistema e da cooperativa
             </Text>
           </Box>
@@ -259,7 +259,7 @@ export default function SettingsPage() {
                           <FormControl display="flex" alignItems="center" justifyContent="space-between">
                             <Box>
                               <FormLabel mb={0}>Notificações por Email</FormLabel>
-                              <Text fontSize="sm" color="text.subtle">
+                              <Text fontSize="sm">
                                 Receber notificações importantes por email
                               </Text>
                             </Box>
@@ -268,7 +268,7 @@ export default function SettingsPage() {
                           <FormControl display="flex" alignItems="center" justifyContent="space-between">
                             <Box>
                               <FormLabel mb={0}>Alertas de Prazo</FormLabel>
-                              <Text fontSize="sm" color="text.subtle">
+                              <Text fontSize="sm">
                                 Notificar antes do vencimento de tarefas
                               </Text>
                             </Box>
@@ -277,7 +277,7 @@ export default function SettingsPage() {
                           <FormControl display="flex" alignItems="center" justifyContent="space-between">
                             <Box>
                               <FormLabel mb={0}>Relatórios Semanais</FormLabel>
-                              <Text fontSize="sm" color="text.subtle">
+                              <Text fontSize="sm">
                                 Receber resumo semanal por email
                               </Text>
                             </Box>
@@ -286,7 +286,7 @@ export default function SettingsPage() {
                           <FormControl display="flex" alignItems="center" justifyContent="space-between">
                             <Box>
                               <FormLabel mb={0}>Alertas de Sistema</FormLabel>
-                              <Text fontSize="sm" color="text.subtle">
+                              <Text fontSize="sm">
                                 Notificar sobre atualizações e manutenção
                               </Text>
                             </Box>
@@ -311,7 +311,7 @@ export default function SettingsPage() {
                           <FormControl display="flex" alignItems="center" justifyContent="space-between">
                             <Box>
                               <FormLabel mb={0}>Autenticação em Duas Etapas</FormLabel>
-                              <Text fontSize="sm" color="text.subtle">
+                              <Text fontSize="sm">
                                 Adicionar camada extra de segurança
                               </Text>
                             </Box>
@@ -320,7 +320,7 @@ export default function SettingsPage() {
                           <FormControl display="flex" alignItems="center" justifyContent="space-between">
                             <Box>
                               <FormLabel mb={0}>Bloqueio por IP</FormLabel>
-                              <Text fontSize="sm" color="text.subtle">
+                              <Text fontSize="sm">
                                 Restringir acesso a IPs específicos
                               </Text>
                             </Box>
@@ -357,36 +357,36 @@ export default function SettingsPage() {
                           Integrações
                         </Heading>
                         <VStack spacing={4} align="stretch">
-                          <Flex justifyContent="space-between" alignItems="center" p={4} bg="gray.50" borderRadius="md">
+                          <Flex justifyContent="space-between" alignItems="center" p={4} bg="gray.50" borderRadius="md" _dark={{ bg: 'dark.bg.tertiary' }}>
                             <HStack>
                               <Icon as={HiGlobeAlt} w={6} h={6} color="blue.500" />
                               <Box>
                                 <Text fontWeight="500">AWS S3</Text>
-                                <Text fontSize="sm" color="text.subtle">
+                                <Text fontSize="sm">
                                   Armazenamento de documentos
                                 </Text>
                               </Box>
                             </HStack>
                             <Badge colorScheme="green">Conectado</Badge>
                           </Flex>
-                          <Flex justifyContent="space-between" alignItems="center" p={4} bg="gray.50" borderRadius="md">
+                          <Flex justifyContent="space-between" alignItems="center" p={4} bg="gray.50" borderRadius="md" _dark={{ bg: 'dark.bg.tertiary' }}>
                             <HStack>
                               <Icon as={HiGlobeAlt} w={6} h={6} color="green.500" />
                               <Box>
                                 <Text fontWeight="500">Email (SMTP)</Text>
-                                <Text fontSize="sm" color="text.subtle">
+                                <Text fontSize="sm">
                                   Envio de notificações
                                 </Text>
                               </Box>
                             </HStack>
                             <Badge colorScheme="yellow">Configurar</Badge>
                           </Flex>
-                          <Flex justifyContent="space-between" alignItems="center" p={4} bg="gray.50" borderRadius="md">
+                          <Flex justifyContent="space-between" alignItems="center" p={4} bg="gray.50" borderRadius="md" _dark={{ bg: 'dark.bg.tertiary' }}>
                             <HStack>
                               <Icon as={HiGlobeAlt} w={6} h={6} color="purple.500" />
                               <Box>
                                 <Text fontWeight="500">Banco de Dados</Text>
-                                <Text fontSize="sm" color="text.subtle">
+                                <Text fontSize="sm">
                                   PostgreSQL + Redis
                                 </Text>
                               </Box>

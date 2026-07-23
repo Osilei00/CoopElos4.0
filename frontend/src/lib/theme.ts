@@ -313,6 +313,68 @@ const theme = extendTheme({
           color: 'dark.text.primary',
         },
       }),
+      defaultProps: {
+        // Necessário para compatibilidade com React 19:
+        // O React 19 removeu ReactDOM.findDOMNode, que o Chakra v2 usa internamente.
+        // shouldWrapChildren envolve o filho em um <span> com ref para resolver isso.
+        shouldWrapChildren: true,
+        hasArrow: true,
+        openDelay: 300,
+      },
+    },
+    FormLabel: {
+      baseStyle: {
+        color: 'text.secondary',
+        fontSize: 'sm',
+        _dark: {
+          color: 'dark.text.secondary',
+        },
+      },
+    },
+    Heading: {
+      baseStyle: {
+        _dark: {
+          color: 'dark.text.primary',
+        },
+      },
+    },
+    Text: {
+      baseStyle: {
+        _dark: {
+          color: 'dark.text.secondary',
+        },
+      },
+    },
+    Accordion: {
+      baseStyle: {
+        button: {
+          _dark: {
+            color: 'dark.text.primary',
+            _hover: {
+              bg: 'dark.bg.tertiary',
+            },
+          },
+        },
+        panel: {
+          _dark: {
+            color: 'dark.text.secondary',
+          },
+        },
+      },
+    },
+    Stat: {
+      baseStyle: {
+        label: {
+          _dark: {
+            color: 'dark.text.subtle',
+          },
+        },
+        number: {
+          _dark: {
+            color: 'dark.text.primary',
+          },
+        },
+      },
     },
   },
 });

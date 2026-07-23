@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, Flex } from '@chakra-ui/react';
-import { Sidebar } from './Sidebar';
+import { Sidebar, SIDEBAR_WIDTH } from './Sidebar';
 import { Header } from './Header';
 import { useColorMode } from '@/lib/color-mode';
 
@@ -12,9 +12,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <Flex minH="100vh">
       <Sidebar />
-      <Box 
-        flex={1} 
-        ml="64px"
+      <Box
+        flex={1}
+        ml={SIDEBAR_WIDTH}
         bg={isDark ? 'dark.bg.primary' : 'gray.50'}
       >
         <Header />

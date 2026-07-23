@@ -28,31 +28,68 @@ import {
   StatLabel,
   StatNumber,
   Code,
+  Skeleton,
+  SkeletonText,
 } from '@chakra-ui/react';
-import { HiMagnifyingGlass, HiShieldCheck, HiDocumentText, HiUserGroup } from 'react-icons/hi2';
+import { HiMagnifyingGlass, HiShieldCheck, HiDocumentText, HiUserGroup, HiChevronLeft, HiChevronRight } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
-import { useSession } from '@/hooks';
-
-const auditData = [
-  { id: 1, user: 'Maria Santos', action: 'create', entity: 'collaborator', entityId: '123', details: 'Criou cadastro de João Silva', timestamp: '2026-06-03 14:30:00', ip: '192.168.1.100' },
-  { id: 2, user: 'Pedro Costa', action: 'update', entity: 'payroll', entityId: '456', details: 'Atualizou folha de pagamento de Ana Oliveira', timestamp: '2026-06-03 14:25:00', ip: '192.168.1.101' },
-  { id: 3, user: 'João Silva', action: 'delete', entity: 'task', entityId: '789', details: 'Removeu tarefa "Verificar documentação"', timestamp: '2026-06-03 14:20:00', ip: '192.168.1.102' },
-  { id: 4, user: 'Maria Santos', action: 'login', entity: 'auth', entityId: '-', details: 'Login realizado com sucesso', timestamp: '2026-06-03 14:15:00', ip: '192.168.1.100' },
-  { id: 5, user: 'Pedro Costa', action: 'export', entity: 'report', entityId: '-', details: 'Exportou relatório mensal de pontualidade', timestamp: '2026-06-03 14:10:00', ip: '192.168.1.101' },
-];
+import { useSession, useAuditLogs } from '@/hooks';
+import { useState } from 'react';
 
 export default function AuditPage() {
   const { data: session } = useSession();
   const isAdmin = session?.role === 'admin';
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [actionFilter, setActionFilter] = useState('');
+  const [entityFilter, setEntityFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const { data: auditLogs, isLoading } = useAuditLogs(entityFilter || undefined);
+
+  const filteredData = (auditLogs || []).filter((item: any) => {
+    const matchesSearch = !searchTerm || 
+      item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.user?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesAction = !actionFilter || item.action === actionFilter;
+    return matchesSearch && matchesAction;
+  });
+
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+  const paginatedData = filteredData.slice((page - 1) * pageSize, page * pageSize);
+
+  const getActionColor = (action: string) => {
+    switch (action) {
+      case 'CREATE': return 'green';
+      case 'UPDATE': return 'blue';
+      case 'DELETE': return 'red';
+      case 'LOGIN': return 'purple';
+      case 'EXPORT': return 'yellow';
+      default: return 'gray';
+    }
+  };
+
+  const getActionLabel = (action: string) => {
+    switch (action) {
+      case 'CREATE': return 'Criar';
+      case 'UPDATE': return 'Atualizar';
+      case 'DELETE': return 'Excluir';
+      case 'LOGIN': return 'Login';
+      case 'EXPORT': return 'Exportar';
+      default: return action;
+    }
+  };
+
   return (
     <MainLayout>
       <Box>
         <Flex justifyContent="space-between" alignItems="center" mb={6}>
           <Box>
-            <Heading size="lg" color="text.primary">
+            <Heading size="lg">
               Auditoria
             </Heading>
-            <Text color="text.secondary" mt={1}>
+            <Text mt={1}>
               Histórico de ações e alterações no sistema
             </Text>
           </Box>
@@ -65,49 +102,6 @@ export default function AuditPage() {
            </HStack>
         </Flex>
 
-        <Grid templateColumns="repeat(4, 1fr)" gap={6} mb={8}>
-          <GridItem>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel color="text.subtle">Ações Hoje</StatLabel>
-                  <StatNumber fontSize="2xl" color="brand.500">156</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-          </GridItem>
-          <GridItem>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel color="text.subtle">Logins</StatLabel>
-                  <StatNumber fontSize="2xl" color="success.500">24</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-          </GridItem>
-          <GridItem>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel color="text.subtle">Alterações</StatLabel>
-                  <StatNumber fontSize="2xl" color="orange.500">89</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-          </GridItem>
-          <GridItem>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel color="text.subtle">Exclusões</StatLabel>
-                  <StatNumber fontSize="2xl" color="danger.500">3</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-          </GridItem>
-        </Grid>
-
         <Card>
           <CardBody>
             <HStack spacing={4} mb={6}>
@@ -115,76 +109,145 @@ export default function AuditPage() {
                 <InputLeftElement pointerEvents="none">
                         <Icon as={HiMagnifyingGlass} color="gray.400" />
                 </InputLeftElement>
-                <Input placeholder="Buscar na auditoria..." />
+                <Input 
+                  placeholder="Buscar na auditoria..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </InputGroup>
-              <Select maxW="200px" placeholder="Ação">
-                <option value="create">Criar</option>
-                <option value="update">Atualizar</option>
-                <option value="delete">Excluir</option>
-                <option value="login">Login</option>
-                <option value="export">Exportar</option>
+              <Select 
+                maxW="200px" 
+                placeholder="Ação"
+                value={actionFilter}
+                onChange={(e) => {
+                  setActionFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="CREATE">Criar</option>
+                <option value="UPDATE">Atualizar</option>
+                <option value="DELETE">Excluir</option>
+                <option value="LOGIN">Login</option>
+                <option value="EXPORT">Exportar</option>
               </Select>
-              <Select maxW="200px" placeholder="Entidade">
-                <option value="collaborator">Colaborador</option>
+              <Select 
+                maxW="200px" 
+                placeholder="Entidade"
+                value={entityFilter}
+                onChange={(e) => {
+                  setEntityFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="cooperado">Cooperado</option>
                 <option value="payroll">Pagamento</option>
                 <option value="task">Tarefa</option>
                 <option value="auth">Autenticação</option>
                 <option value="report">Relatório</option>
               </Select>
-              <Input maxW="200px" type="date" defaultValue="2026-06-03" />
             </HStack>
 
-            <Box overflowX="auto">
-              <Table variant="simple">
-                <Thead>
-                  <Tr>
-                    <Th>Usuário</Th>
-                    <Th>Ação</Th>
-                    <Th>Entidade</Th>
-                    <Th>Detalhes</Th>
-                    <Th>Data/Hora</Th>
-                    <Th>IP</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {auditData.map((item) => (
-                    <Tr key={item.id}>
-                      <Td fontWeight="500">{item.user}</Td>
-                      <Td>
-                        <Badge
-                          colorScheme={
-                            item.action === 'create'
-                              ? 'green'
-                              : item.action === 'update'
-                              ? 'blue'
-                              : item.action === 'delete'
-                              ? 'red'
-                              : item.action === 'login'
-                              ? 'purple'
-                              : 'yellow'
-                          }
-                          borderRadius="full"
-                        >
-                          {item.action}
-                        </Badge>
-                      </Td>
-                      <Td>
-                        <Code fontSize="xs">{item.entity}</Code>
-                      </Td>
-                      <Td color="text.subtle" maxW="300px" isTruncated>
-                        {item.details}
-                      </Td>
-                      <Td color="text.subtle" fontSize="sm">
-                        {item.timestamp}
-                      </Td>
-                      <Td color="text.subtle" fontSize="sm">
-                        {item.ip}
-                      </Td>
+            {isLoading ? (
+              <VStack spacing={4} align="stretch">
+                <Skeleton height="40px" />
+                <SkeletonText noOfLines={4} spacing={4} />
+              </VStack>
+            ) : (
+              <Box overflowX="auto">
+                <Table variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Usuário</Th>
+                      <Th>Ação</Th>
+                      <Th>Entidade</Th>
+                      <Th>Detalhes</Th>
+                      <Th>Data/Hora</Th>
                     </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </Box>
+                  </Thead>
+                  <Tbody>
+                    {paginatedData.length === 0 ? (
+                      <Tr>
+                        <Td colSpan={5} textAlign="center" py={8}>
+                          Nenhum registro encontrado
+                        </Td>
+                      </Tr>
+                    ) : (
+                      paginatedData.map((item: any) => (
+                        <Tr key={item.id}>
+                          <Td fontWeight="500">
+                            {item.user?.name || '-'}
+                          </Td>
+                          <Td>
+                            <Badge
+                              colorScheme={getActionColor(item.action)}
+                              borderRadius="full"
+                            >
+                              {getActionLabel(item.action)}
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <Code fontSize="xs">{item.table_name}</Code>
+                          </Td>
+                          <Td maxW="300px" isTruncated>
+                            {item.description}
+                          </Td>
+                          <Td fontSize="sm">
+                            {new Date(item.created_at).toLocaleString('pt-BR')}
+                          </Td>
+                        </Tr>
+                      ))
+                    )}
+                  </Tbody>
+                </Table>
+              </Box>
+            )}
+
+            {!isLoading && filteredData.length > 0 && (
+              <Flex justifyContent="space-between" alignItems="center" mt={4} flexWrap="wrap" gap={4}>
+                <Text fontSize="xs">
+                  {filteredData.length} registro(s) encontrado(s)
+                  {totalPages > 1 && ` • Página ${page} de ${totalPages}`}
+                </Text>
+                {totalPages > 1 && (
+                  <HStack spacing={2}>
+                    <Button
+                      size="xs"
+                      leftIcon={<HiChevronLeft />}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      isDisabled={page === 1}
+                      variant="outline"
+                    >
+                      Anterior
+                    </Button>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+                      const pageNum = start + i;
+                      if (pageNum > totalPages) return null;
+                      return (
+                        <Button
+                          key={pageNum}
+                          size="xs"
+                          onClick={() => setPage(pageNum)}
+                          variant={page === pageNum ? 'solid' : 'outline'}
+                          colorScheme={page === pageNum ? 'blue' : 'gray'}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                    <Button
+                      size="xs"
+                      rightIcon={<HiChevronRight />}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      isDisabled={page === totalPages}
+                      variant="outline"
+                    >
+                      Próxima
+                    </Button>
+                  </HStack>
+                )}
+              </Flex>
+            )}
           </CardBody>
         </Card>
       </Box>

@@ -14,6 +14,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../generated/prisma/enums';
+import { CreateVacationDto } from './dto/create-vacation.dto';
 
 @Controller('vacations')
 @UseGuards(AuthGuard, RolesGuard)
@@ -26,28 +27,28 @@ export class VacationsController {
     return this.vacationsService.findAll(req.session.cooperativeId);
   }
 
-  @Get('collaborator/:collaboratorId')
-  async findByCollaborator(@Param('collaboratorId') collaboratorId: string) {
-    return this.vacationsService.findByCollaborator(collaboratorId);
+  @Get('cooperado/:cooperadoId')
+  async findByCooperado(@Param('cooperadoId') cooperadoId: string, @Req() req: any) {
+    return this.vacationsService.findByCooperado(req.session.cooperativeId, cooperadoId);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.vacationsService.findOne(id);
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    return this.vacationsService.findOne(id, req.session.cooperativeId);
   }
 
   @Post()
-  async create(@Body() data: any) {
-    return this.vacationsService.create(data);
+  async create(@Body() data: CreateVacationDto, @Req() req: any) {
+    return this.vacationsService.create({ ...data, cooperative_id: req.session.cooperativeId });
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: any) {
-    return this.vacationsService.update(id, data);
+  async update(@Param('id') id: string, @Body() data: CreateVacationDto, @Req() req: any) {
+    return this.vacationsService.update(id, req.session.cooperativeId, data);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
-    return this.vacationsService.remove(id);
+  async remove(@Param('id') id: string, @Req() req: any) {
+    return this.vacationsService.remove(id, req.session.cooperativeId);
   }
 }

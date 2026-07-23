@@ -30,9 +30,9 @@ async function verifyRLS(): Promise<RLSVerificationResult[]> {
       description: 'Usuários - isola por cooperativa',
     },
     {
-      table: 'Collaborator',
+      table: 'Cooperado',
       tenantField: 'cooperative_id',
-      description: 'Colaboradores - isola por cooperativa',
+      description: 'Cooperados - isola por cooperativa',
     },
     {
       table: 'Payroll',
@@ -76,8 +76,8 @@ async function verifyRLS(): Promise<RLSVerificationResult[]> {
     },
     {
       table: 'AdhesionForm',
-      tenantField: 'cooperative_id',
-      description: 'Fichas de adesão - isola por cooperativa',
+      tenantField: 'cooperado_id',
+      description: 'Fichas de adesão - isola via cooperado',
     },
   ];
 

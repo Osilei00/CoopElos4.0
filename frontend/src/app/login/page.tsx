@@ -14,6 +14,7 @@ import {
   Alert,
   AlertIcon,
   IconButton,
+  Tooltip,
 } from '@chakra-ui/react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -47,7 +48,14 @@ export default function LoginPage() {
         throw new Error('Credenciais inválidas');
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['session'] });
+      const data = await response.json();
+
+      // Clear any previous error state by setting the query data directly
+      queryClient.setQueryData(['session'], { 
+        ...data.user, 
+        isLoggedIn: true 
+      });
+      
       router.push('/dashboard');
     } catch (err) {
       setError('Credenciais inválidas');
@@ -65,19 +73,21 @@ export default function LoginPage() {
       bg={isDark ? 'dark.bg.primary' : 'gray.50'}
       position="relative"
     >
-      <IconButton
-        aria-label="Toggle color mode"
-        icon={isDark ? <HiSun /> : <HiMoon />}
-        onClick={toggleColorMode}
-        position="absolute"
-        top={4}
-        right={4}
-        variant="ghost"
-        color={isDark ? 'dark.text.subtle' : 'text.subtle'}
-        _hover={{
-          bg: isDark ? 'dark.bg.tertiary' : 'gray.100',
-        }}
-      />
+      <Tooltip label={isDark ? 'Modo claro' : 'Modo escuro'}>
+        <IconButton
+          aria-label="Toggle color mode"
+          icon={isDark ? <HiSun /> : <HiMoon />}
+          onClick={toggleColorMode}
+          position="absolute"
+          top={4}
+          right={4}
+          variant="ghost"
+          color={isDark ? 'dark.text.subtle' : 'text.subtle'}
+          _hover={{
+            bg: isDark ? 'dark.bg.tertiary' : 'gray.100',
+          }}
+        />
+      </Tooltip>
 
       <Card 
         w="100%" 
@@ -136,6 +146,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    autoComplete="current-password"
                   />
                 </FormControl>
 

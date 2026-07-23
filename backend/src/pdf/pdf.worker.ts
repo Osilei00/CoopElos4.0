@@ -35,12 +35,16 @@ export class PdfWorker implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleInit() {
-    this.worker = new Worker('pdf-generation', this.processJob.bind(this), {
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      },
-    });
+    const redisUrl = process.env.REDIS_URL;
+    let connection: { host: string; port: number };
+    if (redisUrl) {
+      const parsed = new URL(redisUrl);
+      connection = { host: parsed.hostname, port: parseInt(parsed.port || '6379') };
+    } else {
+      connection = { host: process.env.REDIS_HOST || 'localhost', port: parseInt(process.env.REDIS_PORT || '6379') };
+    }
+
+    this.worker = new Worker('pdf-generation', this.processJob.bind(this), { connection });
 
     this.worker.on('completed', (job) => {
       this.logger.log(`PDF job ${job.id} completed for ${job.data.type}`);

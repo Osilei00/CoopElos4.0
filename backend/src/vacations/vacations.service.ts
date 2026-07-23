@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { VacationStatus } from '@prisma/client';
 
 @Injectable()
 export class VacationsService {
@@ -8,16 +9,14 @@ export class VacationsService {
   async findAll(cooperativeId: string) {
     return this.prisma.vacation.findMany({
       where: {
-        collaborator: {
-          cooperative_id: cooperativeId,
-        },
+        cooperado: { cooperative_id: cooperativeId },
       },
       include: {
-        collaborator: {
+        cooperado: {
           select: {
             id: true,
-            full_name: true,
-            cpf: true,
+            nome_cooperado: true,
+            cpf_cooperado: true,
           },
         },
       },
@@ -25,22 +24,28 @@ export class VacationsService {
     });
   }
 
-  async findByCollaborator(collaboratorId: string) {
+  async findByCooperado(cooperativeId: string, cooperadoId: string) {
     return this.prisma.vacation.findMany({
-      where: { collaborator_id: collaboratorId },
+      where: {
+        cooperado_id: cooperadoId,
+        cooperado: { cooperative_id: cooperativeId },
+      },
       orderBy: { start_date: 'desc' },
     });
   }
 
-  async findOne(id: string) {
-    const vacation = await this.prisma.vacation.findUnique({
-      where: { id },
+  async findOne(id: string, cooperativeId: string) {
+    const vacation = await this.prisma.vacation.findFirst({
+      where: {
+        id,
+        cooperado: { cooperative_id: cooperativeId },
+      },
       include: {
-        collaborator: {
+        cooperado: {
           select: {
             id: true,
-            full_name: true,
-            cpf: true,
+            nome_cooperado: true,
+            cpf_cooperado: true,
           },
         },
       },
@@ -53,15 +58,36 @@ export class VacationsService {
     return vacation;
   }
 
-  async create(data: any) {
+  async create(data: {
+    cooperative_id: string;
+    cooperado_id: string;
+    start_date: string;
+    end_date: string;
+    days_count: number;
+    status?: string;
+  }) {
     return this.prisma.vacation.create({
-      data,
+      data: {
+        cooperado_id: data.cooperado_id,
+        start_date: new Date(data.start_date),
+        end_date: new Date(data.end_date),
+        days: data.days_count,
+        status: (data.status as VacationStatus) || VacationStatus.scheduled,
+      },
     });
   }
 
-  async update(id: string, data: any) {
-    const vacation = await this.prisma.vacation.findUnique({
-      where: { id },
+  async update(id: string, cooperativeId: string, data: {
+    start_date?: string;
+    end_date?: string;
+    days_count?: number;
+    status?: string;
+  }) {
+    const vacation = await this.prisma.vacation.findFirst({
+      where: {
+        id,
+        cooperado: { cooperative_id: cooperativeId },
+      },
     });
 
     if (!vacation) {
@@ -70,13 +96,21 @@ export class VacationsService {
 
     return this.prisma.vacation.update({
       where: { id },
-      data,
+      data: {
+        ...(data.start_date && { start_date: new Date(data.start_date) }),
+        ...(data.end_date && { end_date: new Date(data.end_date) }),
+        ...(data.days_count && { days: data.days_count }),
+        ...(data.status && { status: data.status as VacationStatus }),
+      },
     });
   }
 
-  async remove(id: string) {
-    const vacation = await this.prisma.vacation.findUnique({
-      where: { id },
+  async remove(id: string, cooperativeId: string) {
+    const vacation = await this.prisma.vacation.findFirst({
+      where: {
+        id,
+        cooperado: { cooperative_id: cooperativeId },
+      },
     });
 
     if (!vacation) {

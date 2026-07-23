@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unsealData } from 'iron-session';
+import { sessionOptions, SessionData } from '@/lib/session';
+
+const COOKIE_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 dias
 
 export async function GET(
   request: NextRequest,
@@ -45,34 +49,26 @@ async function proxyRequest(
   pathSegments: string[],
   method: string,
 ) {
-  // Get session from cookie
-  const sessionCookie = request.cookies.get('coopelos-session');
+  const cookieValue = request.cookies.get(sessionOptions.cookieName)?.value;
 
-  if (!sessionCookie) {
-    return NextResponse.json(
-      { error: 'Não autenticado' },
-      { status: 401 },
-    );
+  if (!cookieValue) {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
-  let session;
+  let session: SessionData;
   try {
-    session = JSON.parse(sessionCookie.value);
+    session = await unsealData<SessionData>(cookieValue, {
+      password: sessionOptions.password as string,
+      ttl: COOKIE_TTL_SECONDS,
+    });
   } catch {
-    return NextResponse.json(
-      { error: 'Sessão corrompida' },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: 'Sessão inválida' }, { status: 401 });
   }
 
   if (!session.isLoggedIn) {
-    return NextResponse.json(
-      { error: 'Sessão inválida' },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
-  // Build backend URL
   const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
   const path = pathSegments.join('/');
   const searchParams = request.nextUrl.searchParams.toString();
@@ -80,45 +76,41 @@ async function proxyRequest(
     ? `${backendUrl}/api/${path}?${searchParams}`
     : `${backendUrl}/api/${path}`;
 
-  // Forward request to backend with auth headers
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-User-Id': session.userId,
     'X-Cooperative-Id': session.cooperativeId,
   };
 
-  // Forward any additional headers from the original request
   const acceptHeader = request.headers.get('accept');
   if (acceptHeader) {
     headers['Accept'] = acceptHeader;
   }
 
   try {
-    const fetchOptions: RequestInit = {
-      method,
-      headers,
-    };
+    const fetchOptions: RequestInit = { method, headers };
 
-    // Add body for non-GET/HEAD requests
     if (method !== 'GET' && method !== 'HEAD') {
       const body = await request.text();
-      if (body) {
-        fetchOptions.body = body;
-      }
+      if (body) fetchOptions.body = body;
     }
 
     const response = await fetch(backendPath, fetchOptions);
+    const contentType = response.headers.get('Content-Type') || 'application/json';
 
-    // Forward response status and headers
-    const responseHeaders: Record<string, string> = {
-      'Content-Type': response.headers.get('Content-Type') || 'application/json',
-    };
+    if (contentType.includes('application/pdf') || contentType.includes('image/')) {
+      const buffer = await response.arrayBuffer();
+      return new NextResponse(buffer, {
+        status: response.status,
+        headers: { 'Content-Type': contentType },
+      });
+    }
 
     const data = await response.text();
 
     return new NextResponse(data, {
       status: response.status,
-      headers: responseHeaders,
+      headers: { 'Content-Type': contentType },
     });
   } catch (error) {
     console.error('Proxy error:', error);

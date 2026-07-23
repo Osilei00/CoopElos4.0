@@ -30,9 +30,14 @@ export class AuthService {
       throw new UnauthorizedException('User not found or inactive');
     }
 
+    const cooperative = await this.prisma.cooperative.findFirst();
+    if (!cooperative) {
+      throw new UnauthorizedException('No cooperative configured');
+    }
+
     return {
       userId: user.id,
-      cooperativeId: '',
+      cooperativeId: cooperative.id,
       role: user.role,
       name: user.name,
       email: user.email,
@@ -51,9 +56,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Verify password hash
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    
+
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }

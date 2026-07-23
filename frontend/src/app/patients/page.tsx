@@ -20,6 +20,7 @@ import {
   Td,
   Badge,
   IconButton,
+  Tooltip,
   useToast,
   Skeleton,
   Modal,
@@ -36,73 +37,25 @@ import {
 import { HiPlus, HiMagnifyingGlass, HiPencil, HiTrash } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
-
-interface Patient {
-  id: string;
-  name: string;
-  code: string | null;
-  created_at: string;
-}
+import {
+  usePatients,
+  useCreatePatient,
+  useUpdatePatient,
+  useDeletePatient,
+  Patient,
+} from '@/hooks';
 
 export default function PatientsPage() {
   const toast = useToast();
-  const queryClient = useQueryClient();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [search, setSearch] = useState('');
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [formData, setFormData] = useState({ name: '', code: '' });
 
-  const { data: patients, isLoading } = useQuery({
-    queryKey: ['patients', search],
-    queryFn: async () => {
-      const { data } = await api.get('/patients', { params: { search } });
-      return data as Patient[];
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const { data: result } = await api.post('/patients', data);
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['patients'] });
-      toast({ title: 'Paciente criado', status: 'success', duration: 3000 });
-      onClose();
-      resetForm();
-    },
-    onError: () => {
-      toast({ title: 'Erro ao criar paciente', status: 'error', duration: 3000 });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const { data: result } = await api.put(`/patients/${id}`, data);
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['patients'] });
-      toast({ title: 'Paciente atualizado', status: 'success', duration: 3000 });
-      onClose();
-      resetForm();
-    },
-    onError: () => {
-      toast({ title: 'Erro ao atualizar paciente', status: 'error', duration: 3000 });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/patients/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['patients'] });
-      toast({ title: 'Paciente removido', status: 'info', duration: 3000 });
-    },
-  });
+  const { data: patients, isLoading } = usePatients(search);
+  const createMutation = useCreatePatient();
+  const updateMutation = useUpdatePatient();
+  const deleteMutation = useDeletePatient();
 
   const resetForm = () => {
     setFormData({ name: '', code: '' });
@@ -121,10 +74,42 @@ export default function PatientsPage() {
 
   const handleSubmit = () => {
     if (editingPatient) {
-      updateMutation.mutate({ id: editingPatient.id, data: formData });
+      updateMutation.mutate(
+        { id: editingPatient.id, data: formData },
+        {
+          onSuccess: () => {
+            toast({ title: 'Paciente atualizado', status: 'success', duration: 3000 });
+            onClose();
+            resetForm();
+          },
+          onError: () => {
+            toast({ title: 'Erro ao atualizar paciente', status: 'error', duration: 3000 });
+          },
+        },
+      );
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(formData, {
+        onSuccess: () => {
+          toast({ title: 'Paciente criado', status: 'success', duration: 3000 });
+          onClose();
+          resetForm();
+        },
+        onError: () => {
+          toast({ title: 'Erro ao criar paciente', status: 'error', duration: 3000 });
+        },
+      });
     }
+  };
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        toast({ title: 'Paciente removido', status: 'info', duration: 3000 });
+      },
+      onError: () => {
+        toast({ title: 'Erro ao remover paciente', status: 'error', duration: 3000 });
+      },
+    });
   };
 
   return (
@@ -132,10 +117,10 @@ export default function PatientsPage() {
       <Box>
         <Flex justifyContent="space-between" alignItems="center" mb={6}>
           <Box>
-            <Heading size="lg" color="text.primary">
+            <Heading size="lg">
               Pacientes
             </Heading>
-            <Text color="text.secondary" mt={1}>
+            <Text mt={1}>
               Gestão de pacientes para atendimento domiciliar
             </Text>
           </Box>
@@ -198,21 +183,25 @@ export default function PatientsPage() {
                       </Td>
                       <Td>
                         <HStack spacing={2}>
-                          <IconButton
-                            aria-label="Editar"
-                            icon={<HiPencil />}
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleOpenModal(patient)}
-                          />
-                          <IconButton
-                            aria-label="Excluir"
-                            icon={<HiTrash />}
-                            size="sm"
-                            variant="ghost"
-                            colorScheme="red"
-                            onClick={() => deleteMutation.mutate(patient.id)}
-                          />
+                          <Tooltip label="Editar">
+                            <IconButton
+                              aria-label="Editar"
+                              icon={<HiPencil />}
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleOpenModal(patient)}
+                            />
+                          </Tooltip>
+                          <Tooltip label="Excluir">
+                            <IconButton
+                              aria-label="Excluir"
+                              icon={<HiTrash />}
+                              size="sm"
+                              variant="ghost"
+                              colorScheme="red"
+                              onClick={() => handleDelete(patient.id)}
+                            />
+                          </Tooltip>
                         </HStack>
                       </Td>
                     </Tr>
@@ -223,7 +212,6 @@ export default function PatientsPage() {
           </CardBody>
         </Card>
 
-        {/* Modal */}
         <Modal isOpen={isOpen} onClose={onClose} size="md">
           <ModalOverlay />
           <ModalContent>

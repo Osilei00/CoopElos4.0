@@ -5,7 +5,11 @@ Interface web responsiva para gestão de RH/DP. Estilo limpo inspirado no Deel, 
 
 ## Requisitos Funcionais (Frontend)
 - **Dashboard**: Cards de resumo, pendências, alertas.
-- **Colaboradores**: Lista com busca/filtros, perfil em abas, ficha de adesão.
+- **Cooperados**: Lista com busca/filtros, perfil em abas, ficha de adesão.
+- **Declaração de Adesão**: Ícone na lista de cooperados para gerar/baixar PDF dinâmico. Upload na ficha de edição.
+- **Declaração de Quitação**: Upload na ficha de edição do cooperado.
+- **Recibo de Contribuição**: Upload na ficha de edição do cooperado.
+- **Contribuições Financeiras**: Dashboard com gráfico de barras, tabela com filtros, modal para nova contribuição, geração de recibo PDF.
 - **Folha**: Tabelas editáveis, visualização de matriz hospitalar e SAD.
 - **Tarefas**: Lista com filtros de período, marcação de conclusão.
 - **Upload**: Drag & drop ou seletor de arquivos com preview.
@@ -14,15 +18,16 @@ Interface web responsiva para gestão de RH/DP. Estilo limpo inspirado no Deel, 
 ## Mapa de Páginas (App Router)
 - `/login` — Autenticação
 - `/dashboard` — Visão geral
-- `/collaborators` — Lista de colaboradores
-- `/collaborators/[id]` — Perfil (Dados, Documentos, Folha, Férias, Histórico)
-- `/cooperados` — Lista de cooperados (ficha_cooperado_form)
+- `/cooperados` — Lista de cooperados (busca, ordenação, ações)
+- `/cooperados/[id]` — Perfil (Dados, Documentos, Folha, Férias, Histórico)
+- `/cooperados/[id]/edit` — Ficha de edição (dados pessoais, documentos, uploads de PDFs)
 - `/payroll` — Lista de folhas
 - `/payroll/[id]` — Detalhes da folha
 - `/timesheets/hospital` — Matriz hospitalar
 - `/timesheets/sad` — Tabelas SAD por paciente
 - `/patients` — Gestão de pacientes
 - `/vacations` — Controle de férias
+- `/contribuicoes` — Dashboard financeiro (gráfico, tabela, filtros, modal nova contribuição)
 - `/tasks` — Tarefas e alertas
 - `/audit` — Logs (admin)
 - `/users` — Gestão de usuários (admin)
@@ -31,7 +36,7 @@ Interface web responsiva para gestão de RH/DP. Estilo limpo inspirado no Deel, 
 ## Árvore de Componentes
 - `Layout`: Sidebar, Header, MainContent, Footer
 - `UI`: Card, Table, Input, Select, Button, Modal, Toast, Skeleton, Badge, Tabs, Accordion
-- `Feature`: CollaboratorCard, PayrollTable, TimeSheetMatrix, TaskItem, FileUploader, SearchBar
+- `Feature`: CooperadoCard, PayrollTable, TimeSheetMatrix, TaskItem, FileUploader, SearchBar
 
 ## Design System
 - **Estilo**: Deel-inspired, muito espaço em branco, tipografia leve.
@@ -47,7 +52,7 @@ Interface web responsiva para gestão de RH/DP. Estilo limpo inspirado no Deel, 
 ## API Integration Layer
 - `fetch` wrapper com interceptador de sessão.
 - SWR/React Query para cache e revalidação.
-- Hooks: `useCollaborators`, `useCooperados`, `usePayrolls`, `useTasks`, `useSession`.
+- Hooks: `useCooperados`, `useCooperado`, `useCreateCooperado`, `useUpdateCooperado`, `usePayrolls`, `useTasks`, `useSession`.
 
 ## Requisitos Não-Funcionais
 - Responsivo (mobile/tablet/desktop).
@@ -64,7 +69,7 @@ Interface web responsiva para gestão de RH/DP. Estilo limpo inspirado no Deel, 
 ## Stack
 - Next.js 16 App Router
 - TypeScript
-- Chakra UI / Material UI
+- Chakra UI + Tailwind CSS
 - React Query / SWR
 - Zod
 - iron-session

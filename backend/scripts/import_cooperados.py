@@ -11,7 +11,7 @@ conn = psycopg2.connect(DB_URL)
 cur = conn.cursor()
 
 # Delete existing entries
-cur.execute("DELETE FROM collaborator; DELETE FROM adhesion_form;")
+cur.execute("DELETE FROM cooperado; DELETE FROM adhesion_form;")
 conn.commit()
 
 
@@ -24,44 +24,44 @@ def parse_date(d):
 with open(CSV_PATH, newline='', encoding='utf-8') as f:
     reader = csv.DictReader(f)
     for row in reader:
-        full_name = row.get('Nome do Cooperado','').strip()
-        if not full_name:
+        nome_cooperado = row.get('Nome do Cooperado','').strip()
+        if not nome_cooperado:
             continue
-        cpf = row.get('CPF Cooperado','').strip()
+        cpf_cooperado = row.get('CPF Cooperado','').strip()
         rg = row.get('RG','').strip()
-        birth = parse_date(row.get('Nascimento',''))
+        nascimento = parse_date(row.get('Nascimento',''))
         civil_raw = row.get('Estado Civil','').strip()
         if civil_raw == 'Casado(a)':
-            civil = 'married'
+            estado_civil = 'married'
         elif civil_raw == 'Solteiro(a)':
-            civil = 'single'
+            estado_civil = 'single'
         elif civil_raw == 'Divorciado(a)':
-            civil = 'divorced'
+            estado_civil = 'divorced'
         else:
-            civil = 'other'
-        edu = row.get('Escolaridade','').strip()
-        father = row.get('Nome do Pai','').strip()
-        mother = row.get('Nome do Mãe','').strip()
-        mobile = row.get('Celular Cooperado','').strip()
-        home = row.get('Telefone Residencial','').strip()
-        email = row.get('E-mail coop','').strip()
-        address = row.get('Endereço','').strip()
-        neighborhood = row.get('Bairro','').strip()
-        complement = row.get('Complemento','').strip()
-        postal = row.get('CEP','').strip()
-        city = row.get('Cidade','').strip()
-        state = row.get('Estado','').strip()
-        admission = parse_date(row.get('Data de admissão',''))
-        gender_raw = row.get('Sexo','').strip()
-        if gender_raw == 'Masculino':
-            gender = 'masculine'
-        elif gender_raw == 'Feminino':
-            gender = 'feminine'
+            estado_civil = 'other'
+        escolaridade = row.get('Escolaridade','').strip()
+        nome_pai = row.get('Nome do Pai','').strip()
+        nome_mae = row.get('Nome do Mãe','').strip()
+        celular_cooperado = row.get('Celular Cooperado','').strip()
+        telefone_residencial = row.get('Telefone Residencial','').strip()
+        email_cooperado = row.get('E-mail coop','').strip()
+        endereco = row.get('Endereço','').strip()
+        bairro = row.get('Bairro','').strip()
+        complemento = row.get('Complemento','').strip()
+        cep = row.get('CEP','').strip()
+        cidade = row.get('Cidade','').strip()
+        estado = row.get('Estado','').strip()
+        data_admissao = parse_date(row.get('Data de admissão',''))
+        sexo_raw = row.get('Sexo','').strip()
+        if sexo_raw == 'Masculino':
+            sexo = 'masculine'
+        elif sexo_raw == 'Feminino':
+            sexo = 'feminine'
         else:
-            gender = None
+            sexo = None
         cur.execute(
-            "INSERT INTO collaborator (cooperative_id, full_name, cpf, rg, birth_date, marital_status, education_level, father_name, mother_name, mobile_phone, home_phone, email, address, neighborhood, address_complement, postal_code, city, state, gender, admission_date, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-            (COOP_ID, full_name, cpf, rg, birth, civil, edu, father, mother, mobile, home, email, address, neighborhood, complement, postal, city, state, gender, admission, 'active'))
+            "INSERT INTO cooperado (cooperative_id, nome_cooperado, cpf_cooperado, rg, nascimento, estado_civil, escolaridade, nome_pai, nome_mae, celular_cooperado, telefone_residencial, email_cooperado, endereco, bairro, complemento, cep, cidade, estado, sexo, data_admissao, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (COOP_ID, nome_cooperado, cpf_cooperado, rg, nascimento, estado_civil, escolaridade, nome_pai, nome_mae, celular_cooperado, telefone_residencial, email_cooperado, endereco, bairro, complemento, cep, cidade, estado, sexo, data_admissao, 'active'))
 conn.commit()
 print('Inserted rows: ', cur.rowcount)
 cur.close(); conn.close()

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -12,36 +12,21 @@ export class TimeSheetsService {
   async findHospitalAll(cooperativeId: string, year?: number, month?: number) {
     return this.prisma.timeSheetHospital.findMany({
       where: {
-        collaborator: {
-          cooperative_id: cooperativeId,
-        },
+        cooperado: { cooperative_id: cooperativeId },
         ...(year && month && { year, month }),
       },
-      include: {
-        collaborator: {
-          select: {
-            id: true,
-            full_name: true,
-            cpf: true,
-          },
-        },
-      },
-      orderBy: { collaborator: { full_name: 'asc' } },
+      include: { cooperado: { select: { id: true, nome_cooperado: true } } },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
   }
 
-  async findHospitalOne(id: string) {
-    const timesheet = await this.prisma.timeSheetHospital.findUnique({
-      where: { id },
-      include: {
-        collaborator: {
-          select: {
-            id: true,
-            full_name: true,
-            cpf: true,
-          },
-        },
+  async findHospitalOne(id: string, cooperativeId: string) {
+    const timesheet = await this.prisma.timeSheetHospital.findFirst({
+      where: {
+        id,
+        cooperado: { cooperative_id: cooperativeId },
       },
+      include: { cooperado: { select: { id: true, nome_cooperado: true } } },
     });
 
     if (!timesheet) {
@@ -51,50 +36,36 @@ export class TimeSheetsService {
     return timesheet;
   }
 
-  async upsertHospital(data: any) {
-    const { collaborator_id, year, month, schedule_data } = data;
+  async upsertHospital(data: {
+    cooperative_id: string;
+    cooperado_id: string;
+    year: number;
+    month: number;
+    schedule_data: any;
+    total_hours?: number;
+  }) {
+    const { cooperado_id, year, month, schedule_data, total_hours } = data;
 
-    // Calculate total hours from schedule
-    const totalHours = this.calculateHospitalHours(schedule_data);
+    const existing = await this.prisma.timeSheetHospital.findFirst({
+      where: { cooperado_id, year, month },
+    });
 
-    return this.prisma.timeSheetHospital.upsert({
-      where: {
-        collaborator_id_year_month: {
-          collaborator_id,
-          year,
-          month,
-        },
-      },
-      create: {
-        collaborator_id,
+    if (existing) {
+      return this.prisma.timeSheetHospital.update({
+        where: { id: existing.id },
+        data: { schedule_data, total_hours: total_hours ?? existing.total_hours },
+      });
+    }
+
+    return this.prisma.timeSheetHospital.create({
+      data: {
+        cooperado_id,
         year,
         month,
         schedule_data,
-        total_hours: totalHours,
-      },
-      update: {
-        schedule_data,
-        total_hours: totalHours,
+        total_hours: total_hours ?? 0,
       },
     });
-  }
-
-  private calculateHospitalHours(scheduleData: any): number {
-    // Codes: M=6h, T=6h, SN=12h, D=8h, F=0, .=0
-    const codeHours: Record<string, number> = {
-      M: 6,
-      T: 6,
-      SN: 12,
-      D: 8,
-      F: 0,
-      '.': 0,
-    };
-
-    let total = 0;
-    for (const day of Object.values(scheduleData) as string[]) {
-      total += codeHours[day] || 0;
-    }
-    return total;
   }
 
   // ============================================
@@ -104,40 +75,26 @@ export class TimeSheetsService {
   async findSadAll(cooperativeId: string, year?: number, month?: number) {
     return this.prisma.timeSheetSad.findMany({
       where: {
-        collaborator: {
-          cooperative_id: cooperativeId,
-        },
-        patient: {
-          cooperative_id: cooperativeId,
-        },
+        cooperado: { cooperative_id: cooperativeId },
         ...(year && month && { year, month }),
       },
       include: {
-        collaborator: {
-          select: {
-            id: true,
-            full_name: true,
-            cpf: true,
-          },
-        },
         patient: true,
+        cooperado: { select: { id: true, nome_cooperado: true } },
       },
-      orderBy: { patient: { code: 'asc' } },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
   }
 
-  async findSadOne(id: string) {
-    const timesheet = await this.prisma.timeSheetSad.findUnique({
-      where: { id },
+  async findSadOne(id: string, cooperativeId: string) {
+    const timesheet = await this.prisma.timeSheetSad.findFirst({
+      where: {
+        id,
+        cooperado: { cooperative_id: cooperativeId },
+      },
       include: {
-        collaborator: {
-          select: {
-            id: true,
-            full_name: true,
-            cpf: true,
-          },
-        },
         patient: true,
+        cooperado: { select: { id: true, nome_cooperado: true } },
       },
     });
 
@@ -148,73 +105,42 @@ export class TimeSheetsService {
     return timesheet;
   }
 
-  async upsertSad(data: any) {
-    const {
-      collaborator_id,
-      patient_id,
-      year,
-      month,
-      morning_shifts,
-      night_shifts,
-      six_by_one,
-    } = data;
+  async upsertSad(data: {
+    cooperative_id: string;
+    cooperado_id: string;
+    patient_id: string;
+    year: number;
+    month: number;
+    morning_shifts?: number;
+    night_shifts?: number;
+    six_by_one?: number;
+    gross_value?: number;
+    meal_allowance?: number;
+    quota_value?: number;
+    tax_value?: number;
+    net_value?: number;
+  }) {
+    const { cooperado_id, patient_id, year, month, ...fields } = data;
 
-    // Calculate values
-    const grossValue = this.calculateSadGross(
-      morning_shifts,
-      night_shifts,
-      six_by_one,
-    );
-    const taxValue = this.calculateSadTax(grossValue);
-    const netValue = grossValue - taxValue;
+    const existing = await this.prisma.timeSheetSad.findFirst({
+      where: { cooperado_id, patient_id, year, month },
+    });
 
-    return this.prisma.timeSheetSad.upsert({
-      where: {
-        collaborator_id_patient_id_year_month: {
-          collaborator_id,
-          patient_id,
-          year,
-          month,
-        },
-      },
-      create: {
-        collaborator_id,
+    if (existing) {
+      return this.prisma.timeSheetSad.update({
+        where: { id: existing.id },
+        data: fields,
+      });
+    }
+
+    return this.prisma.timeSheetSad.create({
+      data: {
+        cooperado_id,
         patient_id,
         year,
         month,
-        morning_shifts,
-        night_shifts,
-        six_by_one,
-        gross_value: grossValue,
-        tax_value: taxValue,
-        net_value: netValue,
-      },
-      update: {
-        morning_shifts,
-        night_shifts,
-        six_by_one,
-        gross_value: grossValue,
-        tax_value: taxValue,
-        net_value: netValue,
+        ...fields,
       },
     });
-  }
-
-  private calculateSadGross(
-    morning: number,
-    night: number,
-    sixByOne: number,
-  ): number {
-    // TODO: Get actual rates from cooperative settings
-    const morningRate = 150; // R$ 150/day
-    const nightRate = 180; // R$ 180/day
-    const sixByOneRate = 200; // R$ 200/day
-
-    return morning * morningRate + night * nightRate + sixByOne * sixByOneRate;
-  }
-
-  private calculateSadTax(gross: number): number {
-    // TODO: Implement proper tax calculation
-    return gross * 0.15; // 15% tax placeholder
   }
 }

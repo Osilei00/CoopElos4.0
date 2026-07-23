@@ -6,10 +6,9 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(search?: string, cooperativeId?: string) {
+  async findAll(search?: string) {
     return this.prisma.user.findMany({
       where: {
-        ...(cooperativeId && { cooperative_id: cooperativeId }),
         ...(search && {
           OR: [
             { name: { contains: search, mode: 'insensitive' } },
@@ -32,12 +31,9 @@ export class UsersService {
     });
   }
 
-  async findOne(id: string, cooperativeId?: string) {
+  async findOne(id: string) {
     const user = await this.prisma.user.findFirst({
-      where: {
-        id,
-        ...(cooperativeId && { cooperative_id: cooperativeId }),
-      },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -58,13 +54,10 @@ export class UsersService {
     return user;
   }
 
-  async create(data: { name: string; username?: string; email: string; password: string; role: string; cooperative_id: string }) {
-    // Check email uniqueness within cooperative
+  async create(data: { name: string; username?: string; email: string; password: string; role: string }) {
+    // Check email uniqueness
     const existingEmail = await this.prisma.user.findFirst({
-      where: {
-        email: data.email,
-        cooperative_id: data.cooperative_id,
-      },
+      where: { email: data.email },
     });
 
     if (existingEmail) {
@@ -91,7 +84,6 @@ export class UsersService {
         email: data.email,
         password_hash: passwordHash,
         role: data.role as any,
-        cooperative_id: data.cooperative_id,
       },
       select: {
         id: true,

@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { sealData } from 'iron-session';
+import { sessionOptions } from '@/lib/session';
+
+const COOKIE_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 dias
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -12,56 +16,60 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Call backend to validate credentials
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
-    const response = await fetch(`${backendUrl}/api/auth/login`, {
+    const backendResponse = await fetch(`${backendUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
+    if (!backendResponse.ok) {
+      const error = await backendResponse.json().catch(() => ({}));
       return NextResponse.json(
         { error: error.message || 'Credenciais inválidas' },
-        { status: response.status },
+        { status: backendResponse.status },
       );
     }
 
-    const data = await response.json();
+    const data = await backendResponse.json();
 
-    // Create session data
-    const session = {
-      userId: data.userId,
-      cooperativeId: data.cooperativeId,
-      role: data.role,
-      name: data.name,
-      email: data.email,
+    const sessionPayload = {
+      userId: data.userId as string,
+      cooperativeId: data.cooperativeId as string,
+      role: data.role as string,
+      name: data.name as string,
+      email: data.email as string,
       isLoggedIn: true,
     };
 
-    // Create response
-    const responseNext = NextResponse.json({
+    // Sela os dados diretamente com iron-session
+    const sealedSession = await sealData(sessionPayload, {
+      password: sessionOptions.password as string,
+      ttl: COOKIE_TTL_SECONDS,
+    });
+
+    const response = NextResponse.json({
       success: true,
       user: {
-        userId: data.userId,
-        cooperativeId: data.cooperativeId,
-        role: data.role,
-        name: data.name,
-        email: data.email,
+        userId: sessionPayload.userId,
+        cooperativeId: sessionPayload.cooperativeId,
+        role: sessionPayload.role,
+        name: sessionPayload.name,
+        email: sessionPayload.email,
       },
     });
 
-    // Set httpOnly cookie with session data
-    responseNext.cookies.set('coopelos-session', JSON.stringify(session), {
+    // Define o cookie usando a API mais confiável do Next.js
+    response.cookies.set(sessionOptions.cookieName, sealedSession, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production' &&
+        !process.env.NEXT_PUBLIC_APP_URL?.startsWith('http://localhost'),
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: COOKIE_TTL_SECONDS,
     });
 
-    return responseNext;
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

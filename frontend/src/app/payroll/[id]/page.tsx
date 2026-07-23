@@ -9,22 +9,12 @@ import {
   CardBody,
   HStack,
   VStack,
-  Icon,
   Flex,
-  FormControl,
-  FormLabel,
-  Input,
-  Select,
   Grid,
   GridItem,
-  Tabs,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
-  Divider,
   Badge,
   IconButton,
+  Tooltip,
   useToast,
   Table,
   Thead,
@@ -37,71 +27,129 @@ import {
   StatNumber,
   Skeleton,
   SkeletonText,
+  Alert,
+  AlertIcon,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  Input,
+  Select,
 } from '@chakra-ui/react';
-import { HiArrowLeft, HiCheck, HiPrinter, HiCurrencyDollar } from 'react-icons/hi2';
+import { HiArrowLeft, HiPrinter, HiCurrencyDollar, HiPlus } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
 import { ExportButton } from '@/components/ExportButton';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { usePayroll, useClosePayroll, useCreatePayrollItem, useCooperados } from '@/hooks';
+import { useState } from 'react';
 
-interface PayrollDetail {
-  id: string;
-  collaborator: string;
-  role: string;
-  period: string;
-  baseSalary: number;
-  hoursWorked: number;
-  overtimeHours: number;
-  overtimeValue: number;
-  nightShiftValue: number;
-  hazardValue: number;
-  otherBonuses: number;
-  totalGross: number;
-  inss: number;
-  irrf: number;
-  otherDeductions: number;
-  totalDeductions: number;
-  netValue: number;
-  status: string;
-  paymentDate: string;
-}
+const MONTH_NAMES = [
+  '', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
 
-const mockPayroll: PayrollDetail = {
-  id: '1',
-  collaborator: 'João Silva',
-  role: 'Enfermeiro',
-  period: 'Maio/2026',
-  baseSalary: 5500,
-  hoursWorked: 220,
-  overtimeHours: 20,
-  overtimeValue: 1250,
-  nightShiftValue: 400,
-  hazardValue: 200,
-  otherBonuses: 0,
-  totalGross: 7350,
-  inss: 822.50,
-  irrf: 740.50,
-  otherDeductions: 0,
-  totalDeductions: 1563,
-  netValue: 5787,
-  status: 'pago',
-  paymentDate: '2026-05-30',
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  draft: { label: 'Rascunho', color: 'gray' },
+  processing: { label: 'Processando', color: 'yellow' },
+  closed: { label: 'Fechado', color: 'blue' },
+  paid: { label: 'Pago', color: 'green' },
+};
+
+const formatCurrency = (value: number | string | null | undefined) => {
+  if (value === null || value === undefined) return 'R$ 0,00';
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return 'R$ 0,00';
+  return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
 export default function PayrollDetailPage() {
   const router = useRouter();
   const params = useParams();
   const toast = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [payroll, setPayroll] = useState<PayrollDetail | null>(null);
+  const id = params.id as string;
+  const { data: payroll, isLoading, isError } = usePayroll(id);
+  const closePayroll = useClosePayroll();
+  const createPayrollItem = useCreatePayrollItem();
+  const { data: cooperados } = useCooperados();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
-  useEffect(() => {
-    setTimeout(() => {
-      setPayroll(mockPayroll);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+  const [newItem, setNewItem] = useState({
+    cooperado_id: '',
+    gross_amount: '',
+    discounts: '',
+  });
+
+  const handleClose = async () => {
+    try {
+      await closePayroll.mutateAsync(id);
+      toast({
+        title: 'Folha fechada',
+        description: 'A folha foi fechada com sucesso.',
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Não foi possível fechar a folha.';
+      toast({
+        title: 'Erro ao fechar',
+        description: message,
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleCreateItem = async () => {
+    if (!newItem.cooperado_id || !newItem.gross_amount) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: 'Selecione o cooperado e informe o valor bruto.',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+
+    const gross = parseFloat(newItem.gross_amount);
+    const discounts = parseFloat(newItem.discounts) || 0;
+    const net = gross - discounts;
+
+    try {
+      await createPayrollItem.mutateAsync({
+        payrollId: id,
+        data: {
+          cooperado_id: newItem.cooperado_id,
+          gross_amount: gross,
+          discounts,
+          net_amount: net,
+        },
+      });
+      toast({
+        title: 'Item adicionado',
+        description: 'Item incluído na folha com sucesso.',
+        status: 'success',
+        duration: 3000,
+      });
+      setNewItem({ cooperado_id: '', gross_amount: '', discounts: '' });
+      onClose();
+    } catch {
+      toast({
+        title: 'Erro ao adicionar item',
+        description: 'Não foi possível adicionar o item.',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -128,49 +176,93 @@ export default function PayrollDetailPage() {
     );
   }
 
+  if (isError || !payroll) {
+    return (
+      <MainLayout>
+        <Box>
+          <HStack spacing={4} mb={6}>
+            <Tooltip label="Voltar">
+              <IconButton
+                as={Link}
+                href="/payroll"
+                aria-label="Voltar"
+                icon={<HiArrowLeft />}
+                variant="ghost"
+              />
+            </Tooltip>
+            <Heading size="lg">Folha de Pagamento</Heading>
+          </HStack>
+          <Alert status="warning" borderRadius="md">
+            <AlertIcon />
+            Folha não encontrada ou erro ao carregar dados.
+          </Alert>
+          <Button mt={4} onClick={() => router.push('/payroll')}>
+            Voltar para a lista
+          </Button>
+        </Box>
+      </MainLayout>
+    );
+  }
+
+  const items = payroll.items || [];
+  const statusInfo = STATUS_MAP[payroll.status] || { label: payroll.status, color: 'gray' };
+  const periodLabel = `${MONTH_NAMES[payroll.month]}/${payroll.year}`;
+
   return (
     <MainLayout>
       <Box>
         <Flex justifyContent="space-between" alignItems="center" mb={6}>
           <HStack spacing={4}>
-            <Link href="/payroll">
+            <Tooltip label="Voltar">
               <IconButton
+                as={Link}
+                href="/payroll"
                 aria-label="Voltar"
                 icon={<HiArrowLeft />}
                 variant="ghost"
               />
-            </Link>
+            </Tooltip>
             <Box>
-              <Heading size="lg" color="text.primary">
-                Folha de Pagamento
-              </Heading>
-              <Text color="text.secondary" mt={1}>
-                {payroll?.collaborator} - {payroll?.period}
-              </Text>
+              <Heading size="lg">Folha de Pagamento</Heading>
+              <Text mt={1}>{periodLabel}</Text>
             </Box>
-            <Badge colorScheme={payroll?.status === 'pago' ? 'green' : 'yellow'}>
-              {payroll?.status}
-            </Badge>
+            <Badge colorScheme={statusInfo.color}>{statusInfo.label}</Badge>
           </HStack>
           <HStack spacing={3}>
             <Button leftIcon={<HiPrinter />} variant="outline">
               Imprimir
             </Button>
-            <ExportButton type="payroll" id={params.id as string} />
-            <Button leftIcon={<HiCurrencyDollar />} colorScheme="green">
-              Confirmar Pagamento
-            </Button>
+            <ExportButton type="payroll" id={id} />
+            {payroll.status !== 'closed' && payroll.status !== 'paid' && (
+              <>
+                <Button
+                  leftIcon={<HiPlus />}
+                  colorScheme="blue"
+                  onClick={onOpen}
+                >
+                  Adicionar Item
+                </Button>
+                <Button
+                  leftIcon={<HiCurrencyDollar />}
+                  colorScheme="green"
+                  onClick={handleClose}
+                  isLoading={closePayroll.isPending}
+                >
+                  Fechar Folha
+                </Button>
+              </>
+            )}
           </HStack>
         </Flex>
 
-        <Grid templateColumns="repeat(4, 1fr)" gap={6} mb={8}>
+        <Grid templateColumns="repeat(3, 1fr)" gap={6} mb={8}>
           <GridItem>
             <Card>
               <CardBody>
                 <Stat>
-                  <StatLabel color="text.subtle">Salário Base</StatLabel>
-                  <StatNumber fontSize="2xl" color="brand.500">
-                    R$ {payroll?.baseSalary.toLocaleString('pt-BR')}
+                  <StatLabel>Total Bruto</StatLabel>
+                  <StatNumber fontSize="2xl" color="green.500">
+                    {formatCurrency(payroll.total_gross)}
                   </StatNumber>
                 </Stat>
               </CardBody>
@@ -180,9 +272,9 @@ export default function PayrollDetailPage() {
             <Card>
               <CardBody>
                 <Stat>
-                  <StatLabel color="text.subtle">Total Bruto</StatLabel>
-                  <StatNumber fontSize="2xl" color="success.500">
-                    R$ {payroll?.totalGross.toLocaleString('pt-BR')}
+                  <StatLabel>Total Descontos</StatLabel>
+                  <StatNumber fontSize="2xl" color="red.500">
+                    {formatCurrency(payroll.total_discounts)}
                   </StatNumber>
                 </Stat>
               </CardBody>
@@ -192,21 +284,9 @@ export default function PayrollDetailPage() {
             <Card>
               <CardBody>
                 <Stat>
-                  <StatLabel color="text.subtle">Total Deduções</StatLabel>
-                  <StatNumber fontSize="2xl" color="danger.500">
-                    R$ {payroll?.totalDeductions.toLocaleString('pt-BR')}
-                  </StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-          </GridItem>
-          <GridItem>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel color="text.subtle">Valor Líquido</StatLabel>
+                  <StatLabel>Total Líquido</StatLabel>
                   <StatNumber fontSize="2xl" color="purple.500">
-                    R$ {payroll?.netValue.toLocaleString('pt-BR')}
+                    {formatCurrency(payroll.total_net)}
                   </StatNumber>
                 </Stat>
               </CardBody>
@@ -216,185 +296,123 @@ export default function PayrollDetailPage() {
 
         <Card>
           <CardBody>
-            <Tabs colorScheme="blue">
-              <TabList mb={4}>
-                <Tab>Proventos</Tab>
-                <Tab>Deduções</Tab>
-                <Tab>Resumo</Tab>
-              </TabList>
-
-              <TabPanels>
-                <TabPanel p={0}>
-                  <VStack spacing={6} align="stretch">
-                    <Box>
-                      <Heading size="sm" mb={4} color="text.subtle">
-                        Vencimentos
-                      </Heading>
-                      <Table variant="simple">
-                        <Thead>
-                          <Tr>
-                            <Th>Descrição</Th>
-                            <Th isNumeric>Horas</Th>
-                            <Th isNumeric>Valor Unitário</Th>
-                            <Th isNumeric>Total</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          <Tr>
-                            <Td fontWeight="500">Salário Base</Td>
-                            <Td isNumeric>{payroll?.hoursWorked}h</Td>
-                            <Td isNumeric>R$ {(payroll?.baseSalary || 0) / (payroll?.hoursWorked || 1)}</Td>
-                            <Td isNumeric fontWeight="600">
-                              R$ {payroll?.baseSalary.toLocaleString('pt-BR')}
-                            </Td>
-                          </Tr>
-                          <Tr>
-                            <Td fontWeight="500" color="orange.500">Hora Extra (50%)</Td>
-                            <Td isNumeric>{payroll?.overtimeHours}h</Td>
-                            <Td isNumeric>R$ {((payroll?.baseSalary || 0) / (payroll?.hoursWorked || 1) * 1.5).toFixed(2)}</Td>
-                            <Td isNumeric fontWeight="600" color="orange.500">
-                              R$ {payroll?.overtimeValue.toLocaleString('pt-BR')}
-                            </Td>
-                          </Tr>
-                          <Tr>
-                            <Td fontWeight="500" color="purple.500">Adicional Noturno</Td>
-                            <Td isNumeric>-</Td>
-                            <Td isNumeric>-</Td>
-                            <Td isNumeric fontWeight="600" color="purple.500">
-                              R$ {payroll?.nightShiftValue.toLocaleString('pt-BR')}
-                            </Td>
-                          </Tr>
-                          <Tr>
-                            <Td fontWeight="500" color="red.500">Adicional Insalubridade</Td>
-                            <Td isNumeric>-</Td>
-                            <Td isNumeric>-</Td>
-                            <Td isNumeric fontWeight="600" color="red.500">
-                              R$ {payroll?.hazardValue.toLocaleString('pt-BR')}
-                            </Td>
-                          </Tr>
-                          <Tr>
-                            <Td fontWeight="700" colSpan={3}>Total Proventos</Td>
-                            <Td isNumeric fontWeight="700" fontSize="lg">
-                              R$ {payroll?.totalGross.toLocaleString('pt-BR')}
-                            </Td>
-                          </Tr>
-                        </Tbody>
-                      </Table>
-                    </Box>
-                  </VStack>
-                </TabPanel>
-
-                <TabPanel p={0}>
-                  <VStack spacing={6} align="stretch">
-                    <Box>
-                      <Heading size="sm" mb={4} color="text.subtle">
-                        Deduções
-                      </Heading>
-                      <Table variant="simple">
-                        <Thead>
-                          <Tr>
-                            <Th>Descrição</Th>
-                            <Th isNumeric>Base</Th>
-                            <Th isNumeric>Alíquota</Th>
-                            <Th isNumeric>Valor</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          <Tr>
-                            <Td fontWeight="500" color="danger.500">INSS</Td>
-                            <Td isNumeric>R$ {payroll?.totalGross.toLocaleString('pt-BR')}</Td>
-                            <Td isNumeric>11%</Td>
-                            <Td isNumeric fontWeight="600" color="danger.500">
-                              R$ {payroll?.inss.toLocaleString('pt-BR')}
-                            </Td>
-                          </Tr>
-                          <Tr>
-                            <Td fontWeight="500" color="danger.500">IRRF</Td>
-                            <Td isNumeric>R$ {((payroll?.totalGross || 0) - (payroll?.inss || 0)).toLocaleString('pt-BR')}</Td>
-                            <Td isNumeric>-</Td>
-                            <Td isNumeric fontWeight="600" color="danger.500">
-                              R$ {payroll?.irrf.toLocaleString('pt-BR')}
-                            </Td>
-                          </Tr>
-                          <Tr>
-                            <Td fontWeight="700" colSpan={3}>Total Deduções</Td>
-                            <Td isNumeric fontWeight="700" fontSize="lg" color="danger.500">
-                              R$ {payroll?.totalDeductions.toLocaleString('pt-BR')}
-                            </Td>
-                          </Tr>
-                        </Tbody>
-                      </Table>
-                    </Box>
-                  </VStack>
-                </TabPanel>
-
-                <TabPanel p={0}>
-                  <VStack spacing={6} align="stretch">
-                    <Grid templateColumns="repeat(2, 1fr)" gap={6}>
-                      <Box>
-                        <Heading size="sm" mb={4} color="text.subtle">
-                          Resumo do Pagamento
-                        </Heading>
-                        <VStack spacing={3} align="stretch">
-                          <Flex justifyContent="space-between">
-                            <Text>Colaborador:</Text>
-                            <Text fontWeight="500">{payroll?.collaborator}</Text>
-                          </Flex>
-                          <Flex justifyContent="space-between">
-                            <Text>Cargo:</Text>
-                            <Text fontWeight="500">{payroll?.role}</Text>
-                          </Flex>
-                          <Flex justifyContent="space-between">
-                            <Text>Período:</Text>
-                            <Text fontWeight="500">{payroll?.period}</Text>
-                          </Flex>
-                          <Flex justifyContent="space-between">
-                            <Text>Status:</Text>
-                            <Badge colorScheme={payroll?.status === 'pago' ? 'green' : 'yellow'}>
-                              {payroll?.status}
-                            </Badge>
-                          </Flex>
-                          <Flex justifyContent="space-between">
-                            <Text>Data Pagamento:</Text>
-                            <Text fontWeight="500">{payroll?.paymentDate}</Text>
-                          </Flex>
-                        </VStack>
-                      </Box>
-
-                      <Box>
-                        <Heading size="sm" mb={4} color="text.subtle">
-                          Valores
-                        </Heading>
-                        <VStack spacing={3} align="stretch">
-                          <Flex justifyContent="space-between">
-                            <Text>Total Bruto:</Text>
-                            <Text fontWeight="500" color="success.500">
-                              R$ {payroll?.totalGross.toLocaleString('pt-BR')}
-                            </Text>
-                          </Flex>
-                          <Flex justifyContent="space-between">
-                            <Text>Total Deduções:</Text>
-                            <Text fontWeight="500" color="danger.500">
-                              R$ {payroll?.totalDeductions.toLocaleString('pt-BR')}
-                            </Text>
-                          </Flex>
-                          <Divider />
-                          <Flex justifyContent="space-between">
-                            <Text fontWeight="700" fontSize="lg">Valor Líquido:</Text>
-                            <Text fontWeight="700" fontSize="lg" color="purple.500">
-                              R$ {payroll?.netValue.toLocaleString('pt-BR')}
-                            </Text>
-                          </Flex>
-                        </VStack>
-                      </Box>
-                    </Grid>
-                  </VStack>
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
+            <Heading size="sm" mb={4}>
+              Itens da Folha ({items.length} cooperados)
+            </Heading>
+            {items.length === 0 ? (
+              <Alert status="info" borderRadius="md">
+                <AlertIcon />
+                Nenhum item adicionado a esta folha.
+              </Alert>
+            ) : (
+              <Table variant="simple" size="sm">
+                <Thead>
+                  <Tr>
+                    <Th>Cooperado</Th>
+                    <Th>CPF</Th>
+                    <Th isNumeric>Bruto</Th>
+                    <Th isNumeric>Descontos</Th>
+                    <Th isNumeric>Líquido</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {items.map((item: any) => (
+                    <Tr key={item.id}>
+                      <Td fontWeight="500">
+                        {item.cooperado?.nome_cooperado || '—'}
+                      </Td>
+                      <Td>{item.cooperado?.cpf_cooperado || '—'}</Td>
+                      <Td isNumeric color="green.500">
+                        {formatCurrency(item.gross_amount)}
+                      </Td>
+                      <Td isNumeric color="red.500">
+                        {formatCurrency(item.discounts)}
+                      </Td>
+                      <Td isNumeric fontWeight="600" color="purple.500">
+                        {formatCurrency(item.net_amount)}
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            )}
           </CardBody>
         </Card>
       </Box>
+
+      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Adicionar Item à Folha</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <VStack spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Cooperado</FormLabel>
+                <Select
+                  placeholder="Selecione o cooperado"
+                  value={newItem.cooperado_id}
+                  onChange={(e) => setNewItem({ ...newItem, cooperado_id: e.target.value })}
+                >
+                  {(cooperados || []).map((c: any) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome_cooperado} - {c.cpf_mascara || c.cpf}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <HStack spacing={4} w="full">
+                <FormControl isRequired>
+                  <FormLabel>Valor Bruto (R$)</FormLabel>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    value={newItem.gross_amount}
+                    onChange={(e) => setNewItem({ ...newItem, gross_amount: e.target.value })}
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Descontos (R$)</FormLabel>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    value={newItem.discounts}
+                    onChange={(e) => setNewItem({ ...newItem, discounts: e.target.value })}
+                  />
+                </FormControl>
+              </HStack>
+
+              {newItem.gross_amount && (
+                <Text fontSize="sm" color="purple.600" fontWeight="medium">
+                  Líquido: R${' '}
+                  {(
+                    parseFloat(newItem.gross_amount) - (parseFloat(newItem.discounts) || 0)
+                  ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </Text>
+              )}
+            </VStack>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              colorScheme="blue"
+              onClick={handleCreateItem}
+              isLoading={createPayrollItem.isPending}
+            >
+              Adicionar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </MainLayout>
   );
 }

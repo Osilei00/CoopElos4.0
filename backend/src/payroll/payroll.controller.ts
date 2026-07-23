@@ -2,7 +2,10 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Param,
+  Body,
   Query,
   Req,
   UseGuards,
@@ -69,5 +72,42 @@ export class PayrollController {
     });
 
     return { jobId: job.id, status: 'processing' };
+  }
+
+  @Post(':id/items')
+  async createItem(
+    @Param('id') id: string,
+    @Body() data: any,
+    @Req() req: any,
+  ) {
+    return this.payrollService.createItem(id, req.session.cooperativeId, data);
+  }
+
+  @Patch(':id/items/:itemId')
+  async updateItem(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body() data: any,
+    @Req() req: any,
+  ) {
+    return this.payrollService.updateItem(
+      itemId,
+      id,
+      req.session.cooperativeId,
+      data,
+    );
+  }
+
+  @Delete(':id/items/:itemId')
+  async deleteItem(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Req() req: any,
+  ) {
+    return this.payrollService.deleteItem(
+      itemId,
+      id,
+      req.session.cooperativeId,
+    );
   }
 }

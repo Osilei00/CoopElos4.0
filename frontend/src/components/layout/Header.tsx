@@ -1,6 +1,7 @@
 'use client';
 
-import { Box, Flex, Text, Avatar, Menu, MenuButton, MenuList, MenuItem, IconButton } from '@chakra-ui/react';
+import { Box, Flex, Text, Avatar, Menu, MenuButton, MenuList, MenuItem, IconButton, Tooltip } from '@chakra-ui/react';
+import { SIDEBAR_WIDTH } from './Sidebar';
 import { usePathname, useRouter } from 'next/navigation';
 import { HiSun, HiMoon, HiArrowRightOnRectangle } from 'react-icons/hi2';
 import { useColorMode } from '@/lib/color-mode';
@@ -9,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
-  '/collaborators': 'Colaboradores',
+  '/cooperados': 'Cooperados',
   '/payroll': 'Folha de Pagamento',
   '/timesheets/hospital': 'Ponto Hospitalar',
   '/timesheets/sad': 'Ponto SAD',
@@ -55,7 +56,7 @@ export function Header() {
       borderColor={isDark ? 'dark.border.light' : 'border.light'}
       position="fixed"
       top={0}
-      left="64px"
+      left={SIDEBAR_WIDTH}
       right={0}
       zIndex={20}
     >
@@ -74,17 +75,19 @@ export function Header() {
         </Text>
 
         <Flex alignItems="center" gap={4}>
-          <IconButton
-            aria-label="Toggle color mode"
-            icon={isDark ? <HiSun /> : <HiMoon />}
-            onClick={toggleColorMode}
-            variant="ghost"
-            size="sm"
-            color={isDark ? 'dark.text.subtle' : 'text.subtle'}
-            _hover={{
-              bg: isDark ? 'dark.bg.tertiary' : 'gray.100',
-            }}
-          />
+          <Tooltip label={isDark ? 'Modo claro' : 'Modo escuro'}>
+            <IconButton
+              aria-label="Toggle color mode"
+              icon={isDark ? <HiSun /> : <HiMoon />}
+              onClick={toggleColorMode}
+              variant="ghost"
+              size="sm"
+              color={isDark ? 'dark.text.subtle' : 'text.subtle'}
+              _hover={{
+                bg: isDark ? 'dark.bg.tertiary' : 'gray.100',
+              }}
+            />
+          </Tooltip>
 
           <Menu>
             <MenuButton>

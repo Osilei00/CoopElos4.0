@@ -26,8 +26,10 @@ import {
   Badge,
 } from '@chakra-ui/react';
 import { HiArrowLeft, HiCheck } from 'react-icons/hi2';
-import { MainLayout } from '@/components';
+import { MainLayout, ActivityCheckboxGroup, DocumentCheckboxGroup } from '@/components';
 import { useCreateCooperado } from '@/hooks';
+import { maskCpf, maskPhone, maskCurrency } from '@/lib/masks';
+import { BRAZILIAN_STATES } from '@/lib/constants';
 import Link from 'next/link';
 
 const initialForm = {
@@ -88,6 +90,7 @@ const initialForm = {
   venc_cooperados: '',
   matricula: '',
   slug: '',
+  documentos: '',
   status: 'active',
 };
 
@@ -135,11 +138,13 @@ export default function NewCooperadoPage() {
     field,
     placeholder,
     type = 'text',
+    mask,
   }: {
     label: string;
     field: string;
     placeholder?: string;
     type?: string;
+    mask?: (value: string) => string;
   }) => (
     <FormControl>
       <FormLabel fontSize="sm">{label}</FormLabel>
@@ -147,7 +152,7 @@ export default function NewCooperadoPage() {
         type={type}
         placeholder={placeholder || label}
         value={(form as any)[field] || ''}
-        onChange={(e) => update(field, e.target.value)}
+        onChange={(e) => update(field, mask ? mask(e.target.value) : e.target.value)}
         size="sm"
       />
     </FormControl>
@@ -205,10 +210,10 @@ export default function NewCooperadoPage() {
       <Box maxW="900px" mx="auto">
         <Flex justifyContent="space-between" alignItems="center" mb={6}>
           <Box>
-            <Heading size="lg" color="text.primary">
+            <Heading size="lg">
               Novo Cooperado
             </Heading>
-            <Text color="text.secondary">
+            <Text>
               Preencha os dados do cooperado
             </Text>
           </Box>
@@ -257,7 +262,7 @@ export default function NewCooperadoPage() {
                   </FormControl>
                   <Flex gap={4}>
                     <Box flex={1}>
-                      <InputField label="CPF" field="cpf_cooperado" placeholder="000.000.000-00" />
+                      <InputField label="CPF" field="cpf_cooperado" placeholder="000.000.000-00" mask={maskCpf} />
                     </Box>
                     <Box flex={1}>
                       <InputField label="RG" field="rg" />
@@ -337,7 +342,7 @@ export default function NewCooperadoPage() {
                       <InputField label="Nome do Cônjuge" field="nome_conjuge" />
                     </Box>
                     <Box flex={1}>
-                      <InputField label="CPF do Cônjuge" field="cpf_conjuge" placeholder="000.000.000-00" />
+                      <InputField label="CPF do Cônjuge" field="cpf_conjuge" placeholder="000.000.000-00" mask={maskCpf} />
                     </Box>
                   </Flex>
                 </VStack>
@@ -358,16 +363,16 @@ export default function NewCooperadoPage() {
                 <VStack spacing={4} align="stretch">
                   <Flex gap={4}>
                     <Box flex={1}>
-                      <InputField label="Celular" field="celular_cooperado" placeholder="(00) 00000-0000" />
+                      <InputField label="Celular" field="celular_cooperado" placeholder="(00) 00000-0000" mask={maskPhone} />
                     </Box>
                     <Box flex={1}>
-                      <InputField label="Telefone Residencial" field="telefone_residencial" placeholder="(00) 0000-0000" />
+                      <InputField label="Telefone Residencial" field="telefone_residencial" placeholder="(00) 0000-0000" mask={maskPhone} />
                     </Box>
                   </Flex>
                   <InputField label="Email" field="email_cooperado" placeholder="email@exemplo.com" type="email" />
                   <Flex gap={4}>
                     <Box flex={1}>
-                      <InputField label="Celular Indicador" field="celular_indicador" placeholder="(00) 00000-0000" />
+                      <InputField label="Celular Indicador" field="celular_indicador" placeholder="(00) 00000-0000" mask={maskPhone} />
                     </Box>
                     <Box flex={1}>
                       <InputField label="Email Indicador" field="email_indicador" type="email" />
@@ -414,7 +419,21 @@ export default function NewCooperadoPage() {
                       <InputField label="Cidade" field="cidade" />
                     </Box>
                     <Box flex={1}>
-                      <InputField label="Estado" field="estado" placeholder="UF" />
+                      <FormControl>
+                        <FormLabel fontSize="sm">Estado (UF)</FormLabel>
+                        <Select
+                          placeholder="Selecione..."
+                          value={form.estado || ''}
+                          onChange={(e) => update('estado', e.target.value)}
+                          size="sm"
+                        >
+                          {BRAZILIAN_STATES.map((state) => (
+                            <option key={state.value} value={state.value}>
+                              {state.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </Box>
                   </Flex>
                 </VStack>
@@ -444,7 +463,7 @@ export default function NewCooperadoPage() {
                   </Flex>
                   <Flex gap={4}>
                     <Box flex={1}>
-                      <InputField label="Salário" field="salario" placeholder="0,00" />
+                      <InputField label="Salário" field="salario" placeholder="R$ 0,00" mask={maskCurrency} />
                     </Box>
                     <Box flex={1}>
                       <InputField label="Data de Admissão" field="data_admissao" type="date" />
@@ -469,9 +488,21 @@ export default function NewCooperadoPage() {
               </AccordionButton>
               <AccordionPanel pb={6} px={6}>
                 <VStack spacing={4} align="stretch">
-                  <InputField label="Ativ. Coop. Dropa" field="ativ_coop_dropa" />
-                  <InputField label="Ativ. Coop. Dropb" field="ativ_coop_dropb" />
-                  <TextareaField label="Atividades do Cooperado" field="atividades_cooperados" />
+                  <ActivityCheckboxGroup
+                    label="Atividade Cooperado - 01"
+                    value={form.ativ_coop_dropa || ''}
+                    onChange={(v) => update('ativ_coop_dropa', v || '')}
+                  />
+                  <ActivityCheckboxGroup
+                    label="Atividade Cooperado - 02"
+                    value={form.ativ_coop_dropb || ''}
+                    onChange={(v) => update('ativ_coop_dropb', v || '')}
+                  />
+                  <ActivityCheckboxGroup
+                    label="Atividade Cooperado - 03"
+                    value={form.atividades_cooperados || ''}
+                    onChange={(v) => update('atividades_cooperados', v || '')}
+                  />
                   <TextareaField label="Outras Atividades Profissionais" field="outras_ativd_profissionais" />
                 </VStack>
               </AccordionPanel>
@@ -502,10 +533,10 @@ export default function NewCooperadoPage() {
                       <InputField label="Conta Corrente" field="conta_corrente" />
                     </Box>
                     <Box flex={1}>
-                      <InputField label="PIX" field="pix" />
+                      <InputField label="Chave PIX" field="pix" />
                     </Box>
                   </Flex>
-                  <InputField label="Capital Social" field="capital_social" />
+                  <InputField label="Capital Social" field="capital_social" placeholder="R$ 0,00" mask={maskCurrency} />
                 </VStack>
               </AccordionPanel>
             </AccordionItem>
@@ -522,9 +553,11 @@ export default function NewCooperadoPage() {
               </AccordionButton>
               <AccordionPanel pb={6} px={6}>
                 <VStack spacing={4} align="stretch">
-                  <InputField label="Carteira de Registro" field="carteira_registro" />
-                  <InputField label="Atestados Técnicos" field="atestados_tecnicos" />
-                  <InputField label="Currículo Profissional" field="curriculo_profissional" />
+                  <DocumentCheckboxGroup
+                    label="Documentos"
+                    value={form.documentos || ''}
+                    onChange={(v) => update('documentos', v || '')}
+                  />
                   <TextareaField label="Descrição Sucinta" field="descricao_sucinta" />
                 </VStack>
               </AccordionPanel>
@@ -544,18 +577,18 @@ export default function NewCooperadoPage() {
                 <VStack spacing={4} align="stretch">
                   <Flex gap={4}>
                     <Box flex={1}>
-                      <InputField label="Valor Acumulado" field="valor_acumulado" />
+                      <InputField label="Valor Acumulado" field="valor_acumulado" placeholder="R$ 0,00" mask={maskCurrency} />
                     </Box>
                     <Box flex={1}>
-                      <InputField label="Valor Atual" field="valor_atual" />
+                      <InputField label="Valor Atual" field="valor_atual" placeholder="R$ 0,00" mask={maskCurrency} />
                     </Box>
                   </Flex>
                   <Flex gap={4}>
                     <Box flex={1}>
-                      <InputField label="Valor Integralizado" field="valor_integralizado" />
+                      <InputField label="Valor Integralizado" field="valor_integralizado" placeholder="R$ 0,00" mask={maskCurrency} />
                     </Box>
                     <Box flex={1}>
-                      <InputField label="Valor VAR" field="valor_var" />
+                      <InputField label="Valor VAR" field="valor_var" placeholder="R$ 0,00" mask={maskCurrency} />
                     </Box>
                   </Flex>
                 </VStack>
@@ -599,6 +632,17 @@ export default function NewCooperadoPage() {
                     </Box>
                   </Flex>
                   <InputField label="Imagem (URL)" field="imagem_cooperado" placeholder="URL da imagem" />
+                  <FormControl>
+                    <FormLabel fontSize="sm">Status</FormLabel>
+                    <Select
+                      value={form.status || 'active'}
+                      onChange={(e) => update('status', e.target.value)}
+                      size="sm"
+                    >
+                      <option value="active">Ativo</option>
+                      <option value="inactive">Inativo</option>
+                    </Select>
+                  </FormControl>
                   <TextareaField label="Descrição Sucinta" field="descricao_sucinta" />
                 </VStack>
               </AccordionPanel>

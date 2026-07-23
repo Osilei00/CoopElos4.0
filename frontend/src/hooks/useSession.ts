@@ -15,13 +15,12 @@ export function useSession() {
   return useQuery<SessionData>({
     queryKey: ['session'],
     queryFn: async () => {
-      const res = await fetch('/api/auth/session');
-      if (!res.ok) {
-        throw new Error('Não autenticado');
-      }
+      const res = await fetch('/api/auth/session', { credentials: 'include' });
+      if (!res.ok) throw new Error('Não autenticado');
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    retry: false,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+    retryDelay: 1000,
   });
 }

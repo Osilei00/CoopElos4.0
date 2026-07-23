@@ -38,7 +38,6 @@ async function main() {
         username: tu.email.split('@')[0],
         password_hash: passwordHash,
         role: tu.role as any,
-        cooperative_id: cooperative.id,
         is_active: true,
       },
     });

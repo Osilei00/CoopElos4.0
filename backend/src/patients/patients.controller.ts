@@ -15,6 +15,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../generated/prisma/enums';
+import { CreatePatientDto } from './dto/create-patient.dto';
 
 @Controller('patients')
 @UseGuards(AuthGuard, RolesGuard)
@@ -33,14 +34,14 @@ export class PatientsController {
   }
 
   @Post()
-  async create(@Body() data: any, @Req() req: any) {
+  async create(@Body() data: CreatePatientDto, @Req() req: any) {
     return this.patientsService.create(req.session.cooperativeId, data);
   }
 
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() data: any,
+    @Body() data: CreatePatientDto,
     @Req() req: any,
   ) {
     return this.patientsService.update(id, req.session.cooperativeId, data);

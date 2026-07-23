@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unsealData } from 'iron-session';
+import { sessionOptions, SessionData } from '@/lib/session';
+
+const COOKIE_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 dias
 
 export async function GET(request: NextRequest) {
-  const sessionCookie = request.cookies.get('coopelos-session');
+  const cookieValue = request.cookies.get(sessionOptions.cookieName)?.value;
 
-  if (!sessionCookie) {
-    return NextResponse.json(
-      { error: 'Não autenticado' },
-      { status: 401 },
-    );
+  if (!cookieValue) {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
   try {
-    const session = JSON.parse(sessionCookie.value);
+    const session = await unsealData<SessionData>(cookieValue, {
+      password: sessionOptions.password as string,
+      ttl: COOKIE_TTL_SECONDS,
+    });
 
     if (!session.isLoggedIn) {
-      return NextResponse.json(
-        { error: 'Sessão inválida' },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
     return NextResponse.json({
@@ -29,9 +30,7 @@ export async function GET(request: NextRequest) {
       isLoggedIn: session.isLoggedIn,
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Sessão corrompida' },
-      { status: 401 },
-    );
+    console.error('Session read error:', error);
+    return NextResponse.json({ error: 'Sessão inválida' }, { status: 401 });
   }
 }

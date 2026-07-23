@@ -223,7 +223,7 @@ export function CreatableSelect({
             <List maxH="200px" overflowY="auto" pb={1}>
               {allItems.length === 0 && (
                 <ListItem px={3} py={2}>
-                  <Text fontSize="sm" color="text.subtle">
+                  <Text fontSize="sm">
                     Nenhum resultado encontrado
                   </Text>
                 </ListItem>
@@ -260,11 +260,11 @@ export function CreatableSelect({
                 >
                   {'isCustom' in item && item.isCustom ? (
                     <HStack spacing={1}>
-                      <Text fontSize="xs" color="text.subtle">
+                      <Text fontSize="xs">
                         +
                       </Text>
                       <Text fontWeight="500">{item.label}</Text>
-                      <Text fontSize="xs" color="text.subtle">
+                      <Text fontSize="xs">
                         (criar novo)
                       </Text>
                     </HStack>

@@ -20,6 +20,7 @@ import {
   Td,
   Badge,
   IconButton,
+  Tooltip,
   useToast,
   Skeleton,
   SkeletonText,
@@ -41,9 +42,7 @@ import {
 import { HiPlus, HiMagnifyingGlass, HiPencil, HiTrash, HiKey } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
-import { useSession } from '@/hooks';
+import { useSession, useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetPassword } from '@/hooks';
 
 interface User {
   id: string;
@@ -72,7 +71,6 @@ const roleColors: Record<string, string> = {
 
 export default function UsersPage() {
   const toast = useToast();
-  const queryClient = useQueryClient();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isResetOpen, onOpen: onResetOpen, onClose: onResetClose } = useDisclosure();
   const [search, setSearch] = useState('');
@@ -89,71 +87,16 @@ export default function UsersPage() {
   const { data: session, isLoading: sessionLoading } = useSession();
   const isAdmin = session?.role === 'admin';
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users', search],
-    queryFn: async () => {
-      const { data } = await api.get('/users', { params: { search } });
-      return data as User[];
-    },
-    enabled: isAdmin,
-  });
+  const { data: users, isLoading } = useUsers(search);
+  const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
+  const deleteUser = useDeleteUser();
+  const resetPassword = useResetPassword();
 
-  const createMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const { data: result } = await api.post('/users', data);
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast({ title: 'Usuário criado', status: 'success', duration: 3000 });
-      onClose();
-      resetForm();
-    },
-    onError: () => {
-      toast({ title: 'Erro ao criar usuário', status: 'error', duration: 3000 });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const { data: result } = await api.put(`/users/${id}`, data);
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast({ title: 'Usuário atualizado', status: 'success', duration: 3000 });
-      onClose();
-      resetForm();
-    },
-    onError: () => {
-      toast({ title: 'Erro ao atualizar usuário', status: 'error', duration: 3000 });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/users/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast({ title: 'Usuário removido', status: 'info', duration: 3000 });
-    },
-  });
-
-  const resetPasswordMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const { data } = await api.post(`/users/${userId}/reset-password`);
-      return data;
-    },
-    onSuccess: (data) => {
-      setResetResult(data);
-      onResetOpen();
-      toast({ title: 'Senha resetada com sucesso', status: 'success', duration: 3000 });
-    },
-    onError: () => {
-      toast({ title: 'Erro ao resetar senha', status: 'error', duration: 3000 });
-    },
-  });
+  const createUserMutation = useCreateUser();
+  const updateUserMutation = useUpdateUser();
+  const deleteUserMutation = useDeleteUser();
+  const resetPasswordMutation = useResetPassword();
 
   const resetForm = () => {
     setFormData({ name: '', username: '', email: '', password: '', role: 'viewer' });
@@ -173,9 +116,30 @@ export default function UsersPage() {
   const handleSubmit = () => {
     if (editingUser) {
       const { password, ...data } = formData;
-      updateMutation.mutate({ id: editingUser.id, data });
+      updateUserMutation.mutate(
+        { id: editingUser.id, data },
+        {
+          onSuccess: () => {
+            toast({ title: 'Usuário atualizado', status: 'success', duration: 3000 });
+            onClose();
+            resetForm();
+          },
+          onError: () => {
+            toast({ title: 'Erro ao atualizar usuário', status: 'error', duration: 3000 });
+          },
+        }
+      );
     } else {
-      createMutation.mutate(formData);
+      createUserMutation.mutate(formData, {
+        onSuccess: () => {
+          toast({ title: 'Usuário criado', status: 'success', duration: 3000 });
+          onClose();
+          resetForm();
+        },
+        onError: () => {
+          toast({ title: 'Erro ao criar usuário', status: 'error', duration: 3000 });
+        },
+      });
     }
   };
 
@@ -207,10 +171,10 @@ export default function UsersPage() {
       <Box>
         <Flex justifyContent="space-between" alignItems="center" mb={6}>
           <Box>
-            <Heading size="lg" color="text.primary">
+            <Heading size="lg">
               Gestão de Usuários
             </Heading>
-            <Text color="text.secondary" mt={1}>
+            <Text mt={1}>
               Gerencie os usuários do sistema
             </Text>
           </Box>
@@ -287,30 +251,53 @@ export default function UsersPage() {
                       </Td>
                       <Td>
                         <HStack spacing={2}>
-                          <IconButton
-                            aria-label="Editar"
-                            icon={<HiPencil />}
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleOpenModal(user)}
-                          />
-                          <IconButton
-                            aria-label="Resetar Senha"
-                            icon={<HiKey />}
-                            size="sm"
-                            variant="ghost"
-                            colorScheme="orange"
-                            onClick={() => resetPasswordMutation.mutate(user.id)}
-                            isLoading={resetPasswordMutation.isPending}
-                          />
-                          <IconButton
-                            aria-label="Excluir"
-                            icon={<HiTrash />}
-                            size="sm"
-                            variant="ghost"
-                            colorScheme="red"
-                            onClick={() => deleteMutation.mutate(user.id)}
-                          />
+                          <Tooltip label="Editar">
+                            <IconButton
+                              aria-label="Editar"
+                              icon={<HiPencil />}
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleOpenModal(user)}
+                            />
+                          </Tooltip>
+                          <Tooltip label="Resetar Senha">
+                            <IconButton
+                              aria-label="Resetar Senha"
+                              icon={<HiKey />}
+                              size="sm"
+                              variant="ghost"
+                              colorScheme="orange"
+                              onClick={() => {
+                                resetPasswordMutation.mutate(user.id, {
+                                  onSuccess: (data) => {
+                                    setResetResult(data);
+                                    onResetOpen();
+                                    toast({ title: 'Senha resetada com sucesso', status: 'success', duration: 3000 });
+                                  },
+                                  onError: () => {
+                                    toast({ title: 'Erro ao resetar senha', status: 'error', duration: 3000 });
+                                  },
+                                });
+                              }}
+                              isLoading={resetPasswordMutation.isPending}
+                            />
+                          </Tooltip>
+                          <Tooltip label="Excluir">
+                            <IconButton
+                              aria-label="Excluir"
+                              icon={<HiTrash />}
+                              size="sm"
+                              variant="ghost"
+                              colorScheme="red"
+                              onClick={() => {
+                                deleteUserMutation.mutate(user.id, {
+                                  onSuccess: () => {
+                                    toast({ title: 'Usuário removido', status: 'info', duration: 3000 });
+                                  },
+                                });
+                              }}
+                            />
+                          </Tooltip>
                         </HStack>
                       </Td>
                     </Tr>
@@ -383,7 +370,7 @@ export default function UsersPage() {
               <Button
                 colorScheme="blue"
                 onClick={handleSubmit}
-                isLoading={createMutation.isPending || updateMutation.isPending}
+                isLoading={createUserMutation.isPending || updateUserMutation.isPending}
               >
                 {editingUser ? 'Salvar' : 'Criar'}
               </Button>
@@ -401,7 +388,7 @@ export default function UsersPage() {
               {resetResult && (
                 <Box>
                   <Text mb={4}>A nova senha temporária foi gerada com sucesso:</Text>
-                  <Card bg="gray.50" mb={4}>
+                  <Card bg="gray.50" mb={4} _dark={{ bg: 'dark.bg.tertiary' }}>
                     <CardBody>
                       <Text fontWeight="bold" mb={2}>Usuário: {resetResult.username}</Text>
                       <Text fontWeight="bold" color="blue.500">Senha: {resetResult.temporaryPassword}</Text>

@@ -5,10 +5,10 @@ Plataforma de gestao de RH e Departamento Pessoal para cooperativas hospitalares
 ## O que e?
 
 Sistema web que centraliza:
-- Cadastro de colaboradores
+- Cadastro de cooperados
 - Folha de pagamento (hospitalar e SAD)
 - Controle de ponto e jornadas
-- Gestao de férias
+- Gestao de fï¿½rias
 - Tarefas e alertas
 - Auditoria
 
@@ -77,8 +77,12 @@ coopelos4.0/
 ## Features
 
 - **Auth**: Login via email/senha com sessao segura (httpOnly cookie)
-- **Colaboradores**: CRUD completo, ficha de adesao, upload de documentos
-- **Folha**: Geracao mensal, calculos (horas extras, noturno, descontos)
+- **Dashboard**: Estatisticas em tempo real (cooperados ativos, folha do mes, tarefas pendentes, ferias programadas)
+- **Cooperados**: CRUD completo, ficha de adesao, upload de documentos
+- **Declaracao de Adesao**: Upload, visualizacao e download do PDF da declaracao assinada pelo cooperado
+- **Declaracao de Quitacao**: Comprovante de que o cooperado nao possui dividas com a cooperativa
+- **Contribuicoes**: Controle financeiro de contribuicoes mensais com dashboard, geracao de recibo PDF e upload
+- **Folha**: Geracao mensal, calculos (horas extras, noturno, descontos), itens com recalculo automatico de totais
 - **Ponto Hospitalar**: Matriz de escalas com codigos (M/T/SN/D/F)
 - **Ponto SAD**: Tabelas por paciente com calculo de producao
 - **Ferias**: Registro, saldo, alertas de vencimento

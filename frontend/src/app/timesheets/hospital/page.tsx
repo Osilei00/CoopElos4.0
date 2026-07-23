@@ -27,29 +27,50 @@ import {
   Stat,
   StatLabel,
   StatNumber,
+  Skeleton,
+  SkeletonText,
 } from '@chakra-ui/react';
 import { HiMagnifyingGlass, HiPlus, HiClock, HiCalendarDays, HiArrowDownTray } from 'react-icons/hi2';
 import { MainLayout } from '@/components';
 import { ExportButton } from '@/components/ExportButton';
-
-const hospitalData = [
-  { id: '1', collaborator: 'João Silva', code: 'M', hours: 6, date: '2026-05-01', extra: 0, total: 6 },
-  { id: '2', collaborator: 'João Silva', code: 'T', hours: 6, date: '2026-05-02', extra: 0, total: 6 },
-  { id: '3', collaborator: 'Maria Santos', code: 'SN', hours: 12, date: '2026-05-01', extra: 4, total: 16 },
-  { id: '4', collaborator: 'Pedro Costa', code: 'D', hours: 8, date: '2026-05-01', extra: 0, total: 8 },
-  { id: '5', collaborator: 'Ana Oliveira', code: 'M', hours: 6, date: '2026-05-01', extra: 2, total: 8 },
-];
+import { useTimesheetsHospital } from '@/hooks';
+import { useState } from 'react';
 
 export default function TimesheetsHospitalPage() {
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [codeFilter, setCodeFilter] = useState('');
+
+  const { data: timesheets, isLoading } = useTimesheetsHospital(selectedYear, selectedMonth);
+
+  const filteredData = (timesheets || []).filter((item: any) => {
+    const matchesSearch = !searchTerm || 
+      item.cooperado?.nome_cooperado?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCode = !codeFilter || item.shift_code === codeFilter;
+    return matchesSearch && matchesCode;
+  });
+
+  const getCodeLabel = (code: string) => {
+    switch (code) {
+      case 'M': return 'Manhã (6h)';
+      case 'T': return 'Tarde (6h)';
+      case 'SN': return 'Standard Noite (12h)';
+      case 'D': return 'Diurno (8h)';
+      case 'F': return 'Folga';
+      default: return code;
+    }
+  };
+
   return (
     <MainLayout>
       <Box>
         <Flex justifyContent="space-between" alignItems="center" mb={6}>
           <Box>
-            <Heading size="lg" color="text.primary">
+            <Heading size="lg">
               Ponto Hospitalar
             </Heading>
-            <Text color="text.secondary" mt={1}>
+            <Text mt={1}>
               Controle de jornada dos cooperados no regime hospitalar
             </Text>
           </Box>
@@ -63,48 +84,38 @@ export default function TimesheetsHospitalPage() {
           </HStack>
         </Flex>
 
-        <Grid templateColumns="repeat(4, 1fr)" gap={6} mb={8}>
-          <GridItem>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel color="text.subtle">Total Horas (Mês)</StatLabel>
-                  <StatNumber fontSize="2xl" color="brand.500">1.280h</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-          </GridItem>
-          <GridItem>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel color="text.subtle">Horas Extras</StatLabel>
-                  <StatNumber fontSize="2xl" color="orange.500">120h</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-          </GridItem>
-          <GridItem>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel color="text.subtle">Cooperados Ativos</StatLabel>
-                  <StatNumber fontSize="2xl" color="success.500">24</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-          </GridItem>
-          <GridItem>
-            <Card>
-              <CardBody>
-                <Stat>
-                  <StatLabel color="text.subtle">Média Diária</StatLabel>
-                  <StatNumber fontSize="2xl" color="purple.500">7.2h</StatNumber>
-                </Stat>
-              </CardBody>
-            </Card>
-          </GridItem>
-        </Grid>
+        <Card mb={6}>
+          <CardBody>
+            <HStack spacing={4}>
+              <Select 
+                maxW="150px" 
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              >
+                <option value={1}>Janeiro</option>
+                <option value={2}>Fevereiro</option>
+                <option value={3}>Março</option>
+                <option value={4}>Abril</option>
+                <option value={5}>Maio</option>
+                <option value={6}>Junho</option>
+                <option value={7}>Julho</option>
+                <option value={8}>Agosto</option>
+                <option value={9}>Setembro</option>
+                <option value={10}>Outubro</option>
+                <option value={11}>Novembro</option>
+                <option value={12}>Dezembro</option>
+              </Select>
+              <Select 
+                maxW="150px" 
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              >
+                <option value={2026}>2026</option>
+                <option value={2025}>2025</option>
+              </Select>
+            </HStack>
+          </CardBody>
+        </Card>
 
         <Card>
           <CardBody>
@@ -113,63 +124,88 @@ export default function TimesheetsHospitalPage() {
                 <InputLeftElement pointerEvents="none">
                         <Icon as={HiMagnifyingGlass} color="gray.400" />
                 </InputLeftElement>
-                <Input placeholder="Buscar cooperado..." />
+                <Input 
+                  placeholder="Buscar cooperado..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </InputGroup>
-              <Select maxW="200px" placeholder="Código">
-                <option value="M">M (6h)</option>
-                <option value="T">T (6h)</option>
-                <option value="SN">SN (12h)</option>
-                <option value="D">D (8h)</option>
-                <option value="F">F (Folga)</option>
+              <Select 
+                maxW="200px" 
+                placeholder="Turno"
+                value={codeFilter}
+                onChange={(e) => setCodeFilter(e.target.value)}
+              >
+                <option value="M">Manhã (6h)</option>
+                <option value="T">Tarde (6h)</option>
+                <option value="SN">Standard Noite (12h)</option>
+                <option value="D">Diurno (8h)</option>
+                <option value="F">Folga</option>
               </Select>
-              <Input maxW="200px" type="date" defaultValue="2026-05-01" />
             </HStack>
 
-            <Box overflowX="auto">
-              <Table variant="simple">
-                <Thead>
-                  <Tr>
-                    <Th>Cooperado</Th>
-                    <Th>Data</Th>
-                    <Th>Código</Th>
-                    <Th isNumeric>Horas Base</Th>
-                    <Th isNumeric>Horas Extras</Th>
-                    <Th isNumeric>Total</Th>
-                    <Th>Ações</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {hospitalData.map((item) => (
-                    <Tr key={item.id}>
-                      <Td fontWeight="500">{item.collaborator}</Td>
-                      <Td>{item.date}</Td>
-                      <Td>
-                        <Badge colorScheme="blue" borderRadius="full">
-                          {item.code}
-                        </Badge>
-                      </Td>
-                      <Td isNumeric>{item.hours}h</Td>
-                      <Td isNumeric color={item.extra > 0 ? 'orange.500' : 'text.subtle'}>
-                        {item.extra > 0 ? `+${item.extra}h` : '-'}
-                      </Td>
-                      <Td isNumeric fontWeight="600">{item.total}h</Td>
-                      <Td>
-                        <HStack spacing={2}>
-                          <ExportButton
-                            type="timesheet_hospital"
-                            id={item.id}
-                            label="PDF"
-                          />
-                          <Button size="sm" variant="ghost" colorScheme="blue">
-                            Editar
-                          </Button>
-                        </HStack>
-                      </Td>
+            {isLoading ? (
+              <VStack spacing={4} align="stretch">
+                <Skeleton height="40px" />
+                <SkeletonText noOfLines={4} spacing={4} />
+              </VStack>
+            ) : (
+              <Box overflowX="auto">
+                <Table variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Cooperado</Th>
+                      <Th>Data</Th>
+                      <Th>Turno</Th>
+                      <Th isNumeric>Horas Base</Th>
+                      <Th isNumeric>Horas Extras</Th>
+                      <Th isNumeric>Total</Th>
+                      <Th>Ações</Th>
                     </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </Box>
+                  </Thead>
+                  <Tbody>
+                    {filteredData.length === 0 ? (
+                      <Tr>
+                        <Td colSpan={7} textAlign="center" py={8}>
+                          Nenhum registro encontrado
+                        </Td>
+                      </Tr>
+                    ) : (
+                      filteredData.map((item: any) => (
+                        <Tr key={item.id}>
+                          <Td fontWeight="500">
+                            {item.cooperado?.nome_cooperado || '-'}
+                          </Td>
+                          <Td>{item.date || '-'}</Td>
+                          <Td>
+                            <Badge colorScheme="blue" borderRadius="full">
+                              {getCodeLabel(item.shift_code)}
+                            </Badge>
+                          </Td>
+                          <Td isNumeric>{item.base_hours || 0}h</Td>
+                          <Td isNumeric color={(item.overtime_hours || 0) > 0 ? 'orange.500' : undefined}>
+                            {(item.overtime_hours || 0) > 0 ? `+${item.overtime_hours}h` : '-'}
+                          </Td>
+                          <Td isNumeric fontWeight="600">{item.total_hours || 0}h</Td>
+                          <Td>
+                            <HStack spacing={2}>
+                              <ExportButton
+                                type="timesheet_hospital"
+                                id={item.id}
+                                label="PDF"
+                              />
+                              <Button size="sm" variant="ghost" colorScheme="blue">
+                                Editar
+                              </Button>
+                            </HStack>
+                          </Td>
+                        </Tr>
+                      ))
+                    )}
+                  </Tbody>
+                </Table>
+              </Box>
+            )}
           </CardBody>
         </Card>
       </Box>
