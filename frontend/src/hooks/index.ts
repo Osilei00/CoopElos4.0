@@ -491,7 +491,7 @@ export function useContribuicaoStats(ano?: number) {
 export function useCreateContribuicao() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { cooperado_id: string; valor: number; mes: number; ano: number; descricao?: string }) => {
+    mutationFn: async (data: { cooperado_id: string; valor: number; mes: number; ano: number; tipo?: string; descricao?: string }) => {
       const { data: result } = await api.post('/contribuicoes', data);
       return result;
     },
