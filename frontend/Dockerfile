@@ -12,7 +12,7 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build Next.js
+# Build Next.js (standalone mode)
 RUN npm run build
 
 # Production stage
@@ -20,16 +20,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install production dependencies only
-RUN npm ci --only=production
-
-# Copy built files from builder
-COPY --from=builder /app/.next ./.next
+# Copy standalone output (Next.js 16)
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.ts ./
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
@@ -44,4 +38,4 @@ USER nextjs
 EXPOSE 3000
 
 # Start the server
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
