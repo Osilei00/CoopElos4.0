@@ -36,6 +36,7 @@ RUN npx prisma generate
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
+COPY prisma.config.ts ./
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
