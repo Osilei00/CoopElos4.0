@@ -322,7 +322,7 @@ model AdhesionForm {
   modified_date              DateTime?
   creator                    String?
   created_at                 DateTime    @default(now())
-  updated_at                 DateTime
+  updated_at                 DateTime    @updatedAt
   cooperative                Cooperative @relation(fields: [cooperative_id], references: [id])
   cooperado_id               String?   @unique
   cooperado                  Cooperado?   @relation(fields: [cooperado_id], references: [id])
