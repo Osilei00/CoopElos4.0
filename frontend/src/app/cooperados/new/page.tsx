@@ -114,8 +114,15 @@ export default function NewCooperadoPage() {
       return;
     }
 
+    const dateFields = ['nascimento', 'data_admissao', 'data_cadastro'];
+    const payload = Object.fromEntries(
+      Object.entries(form).map(([key, value]) =>
+        dateFields.includes(key) && !value ? [key, undefined] : [key, value],
+      ),
+    );
+
     try {
-      await createCooperado.mutateAsync(form);
+      await createCooperado.mutateAsync(payload);
       toast({
         title: 'Cooperado criado',
         description: 'Novo cooperado adicionado com sucesso.',
