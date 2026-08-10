@@ -19,6 +19,34 @@ export const UserRole = {
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 
 
+export const Gender = {
+  masculine: 'masculine',
+  feminine: 'feminine'
+} as const
+
+export type Gender = (typeof Gender)[keyof typeof Gender]
+
+
+export const MaritalStatus = {
+  single: 'single',
+  married: 'married',
+  divorced: 'divorced',
+  widowed: 'widowed',
+  other: 'other'
+} as const
+
+export type MaritalStatus = (typeof MaritalStatus)[keyof typeof MaritalStatus]
+
+
+export const CollaboratorStatus = {
+  active: 'active',
+  inactive: 'inactive',
+  suspended: 'suspended'
+} as const
+
+export type CollaboratorStatus = (typeof CollaboratorStatus)[keyof typeof CollaboratorStatus]
+
+
 export const TaskStatus = {
   pending: 'pending',
   in_progress: 'in_progress',
@@ -37,13 +65,3 @@ export const PayrollStatus = {
 } as const
 
 export type PayrollStatus = (typeof PayrollStatus)[keyof typeof PayrollStatus]
-
-
-export const VacationStatus = {
-  scheduled: 'scheduled',
-  approved: 'approved',
-  taken: 'taken',
-  cancelled: 'cancelled'
-} as const
-
-export type VacationStatus = (typeof VacationStatus)[keyof typeof VacationStatus]
