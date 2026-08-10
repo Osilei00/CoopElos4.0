@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { VacationStatus } from '@prisma/client';
+import { VacationStatus } from '../generated/prisma/enums';
 
 @Injectable()
 export class VacationsService {
