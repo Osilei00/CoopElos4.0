@@ -243,6 +243,57 @@ docker logs coopelos-frontend
 
 ---
 
+## Incidentes Passados / Licoes Aprendidas
+
+### 1. Nao migrar para o generator `prisma-client` do Prisma 7 sem preparar o projeto para ESM
+
+**Data:** 2026-08-10  
+**Sintoma:** Backend entra em crash-loop com:
+```
+ReferenceError: exports is not defined in ES module scope
+file:///app/dist/generated/prisma/client.js:38
+```
+**Causa:** O novo generator `prisma-client` (Prisma 7) gera `client.js` contendo `import.meta.url`, que e sintaxe ESM. Com o build TypeScript configurado para `commonjs` e o container rodando Node 20.20.2, o Node detecta o arquivo como ES module e nao encontra `exports`, causando o crash.
+
+**Solucao:** Manter o generator classico `prisma-client-js` e importar o client de `@prisma/client`:
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+```
+```ts
+import { PrismaClient } from '@prisma/client';
+```
+
+**Se quiser migrar no futuro:** o projeto inteiro precisa ser convertido para ESM (`"type": "module"`, `tsconfig.module` compativel, etc.) e testado exaustivamente no Dockerfile antes do deploy.
+
+### 2. Frontend Next.js standalone precisa escutar em `0.0.0.0`
+
+**Data:** 2026-08-10  
+**Sintoma:** Apos o deploy, o site retorna `Bad Gateway`. Containers estao `Up`, backend responde, mas o frontend nao e acessivel pelo Traefik.  
+**Causa:** O Next.js em modo standalone estava escutando no hostname do container, que resolvia para o IP da rede bridge padrao (`172.17.0.5:3000`). O Traefik esta na `dokploy-network` (`10.0.1.x`) e nao consegue rotear para esse IP.
+
+**Solucao:** Forcar `HOSTNAME=0.0.0.0` no servico `frontend` do `docker-compose.dokploy.yml`:
+```yaml
+  frontend:
+    # ...
+    environment:
+      - BACKEND_URL=http://backend:3001
+      - SESSION_SECRET=${SESSION_SECRET}
+      - NEXT_PUBLIC_APP_URL=${APP_URL}
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN}
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+```
+
+**Como diagnosticar:** Dentro do container frontend, verifique em qual IP a porta 3000 esta aberta:
+```bash
+docker exec coopelos-frontend sh -c "ss -tlnp"
+```
+Se aparecer algo como `172.17.0.5:3000` em vez de `0.0.0.0:3000` ou `:::3000`, o Traefik nao consegue alcancar o servico.
+
+---
+
 ## Arquitetura Final
 
 ```
